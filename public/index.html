@@ -659,37 +659,10 @@ function renderWatchlist() {
   }
   container.innerHTML = out;
   container.querySelectorAll('[data-symbol]').forEach(el => {
-    // Header: kollabieren
-    const header = el.querySelector('.item-header');
-    if (header) {
-      header.addEventListener('click', function(e) {
-        el.classList.toggle('open');
-      });
-    }
-    // Detail-Bereich: zur Detail-Ansicht
-    const details = el.querySelector('.item-details');
-    if (details) {
-      // Verdict-Row antippbar für Detail-View
-      const verdictRow = details.querySelector('.verdict-row');
-      if (verdictRow) {
-        verdictRow.style.cursor = 'pointer';
-        verdictRow.addEventListener('click', function(e) {
-          e.stopPropagation();
-          const a = watchlist.find(x => x.symbol === el.dataset.symbol);
-          if (a) { renderDetail(a); showView('detail'); }
-        });
-        // "Öffnen" Link
-        const openLink = document.createElement('span');
-        openLink.textContent = 'Details öffnen ›';
-        openLink.style.cssText = 'font-size:13px;color:var(--accent);font-weight:600;margin-top:8px;display:block;cursor:pointer;';
-        openLink.addEventListener('click', function(e) {
-          e.stopPropagation();
-          const a = watchlist.find(x => x.symbol === el.dataset.symbol);
-          if (a) { renderDetail(a); showView('detail'); }
-        });
-        details.appendChild(openLink);
-      }
-    }
+    el.addEventListener('click', function() {
+      const a = watchlist.find(x => x.symbol === el.dataset.symbol);
+      if (a) { renderDetail(a); showView('detail'); }
+    });
   });
 }
 
