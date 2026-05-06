@@ -491,24 +491,26 @@ function renderCard(a) {
 }
 
 // ── News rendern ──────────────────────────────────
+async function fetchGeneralNews(forceRefresh = false) {
+  // Holt allgemeine Markt-News (nicht symbol-spezifisch)
+  const refresh = forceRefresh ? '&refresh=1' : '';
+  const res = await fetch(`${API}/fetch-news?symbols=MARKET&types=general${refresh}`);
+  return res.ok ? res.json() : [];
+}
+
 async function loadNews(forceRefresh = false) {
   const container = document.getElementById('news-content');
   const subtitle = document.getElementById('news-subtitle');
 
-  if (watchlist.length === 0) {
-    container.innerHTML = `<div class="empty-state"><div class="ico">📰</div><h3>Watchlist ist leer</h3><p>Füge zuerst Assets zur Watchlist hinzu.</p></div>`;
-    return;
-  }
-
-  if (newsCache) { renderNews(newsCache); return; }
+  if (newsCache && !forceRefresh) { renderNews(newsCache); return; }
 
   container.innerHTML = `<div class="news-loading"><div class="spinner"></div><br>News werden geladen…</div>`;
   subtitle.textContent = 'Wird aktualisiert…';
 
   try {
-    const symbols = watchlist.map(a => a.symbol);
-    const types = watchlist.map(a => a.type);
-    const news = await fetchNews(symbols, types, forceRefresh);
+    // Nur Symbole die NICHT in der Watchlist sind — generische Markt-News
+    // Wir holen allgemeine Finnhub News ohne Symbol-Filter
+    const news = await fetchGeneralNews(forceRefresh);
     newsCache = news;
     renderNews(news);
     subtitle.textContent = `${news.length} Artikel · ${new Date().toLocaleTimeString('de-DE', {hour:'2-digit',minute:'2-digit'})} Uhr`;
@@ -524,24 +526,27 @@ function renderNews(news) {
     return;
   }
 
+  // Watchlist-Symbole herausfiltern
+  const wlSymbols = new Set(watchlist.map(a => a.symbol));
+  const filtered = news.filter(item => !item.relatedSymbol || !wlSymbols.has(item.relatedSymbol));
+
+  if (!filtered.length) {
+    container.innerHTML = `<div class="empty-state"><div class="ico">📭</div><h3>Keine externen News</h3><p>Alle aktuellen News beziehen sich auf deine Watchlist-Assets.</p></div>`;
+    return;
+  }
+
   // Nach Datum gruppieren
   const groups = {};
-  news.forEach(item => {
+  filtered.forEach(item => {
     const label = fmtNewsDate(item.datetime);
     if (!groups[label]) groups[label] = [];
     groups[label].push(item);
   });
 
-  // Verdict des zugehörigen Assets
-  const verdictMap = {};
-  watchlist.forEach(a => { verdictMap[a.symbol] = a.verdict || 'neu'; });
-
   let out = '';
   for (const [label, items] of Object.entries(groups)) {
     out += `<div class="group-header">${label}</div><div class="list-group">`;
     items.forEach(item => {
-      const sym = item.relatedSymbol;
-      const v = verdictMap[sym] || 'neu';
       const timeStr = new Date(item.datetime).toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit'});
       out += `
       <div class="news-item" data-url="${item.url||''}">
@@ -550,12 +555,6 @@ function renderNews(news) {
           <span class="news-source">${escHtml(item.source)}</span>
           <span>·</span>
           <span>${timeStr} Uhr</span>
-        </div>
-        <div class="news-relates">
-          <span class="related-tag">
-            <span class="verdict-mini ${v}"></span>
-            <span>${sym}</span>
-          </span>
         </div>
       </div>`;
     });
@@ -813,6 +812,39 @@ function renderDetail(a) {
     saveWatchlist(watchlist); renderWatchlist(); showView('watchlist');
   });
   document.getElementById('btn-analyze').addEventListener('click', () => runAnalysis(a));
+
+  // News für dieses Asset laden
+  loadDetailNews(a);
+}
+
+async function loadDetailNews(a) {
+  const container = document.getElementById('detail-news-content');
+  if (!container) return;
+  try {
+    const news = await fetchNews([a.symbol], [a.type]);
+    const assetNews = news.filter(n => !n.relatedSymbol || n.relatedSymbol === a.symbol);
+    if (!assetNews.length) {
+      container.innerHTML = '<div class="list-group"><div class="list-item" style="cursor:default;"><div style="font-size:14px;color:var(--text-secondary);">Keine aktuellen News gefunden.</div></div></div>';
+      return;
+    }
+    container.innerHTML = `<div class="list-group">${assetNews.slice(0,8).map(item => {
+      const timeStr = new Date(item.datetime).toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit'});
+      const dateStr = fmtNewsDate(item.datetime);
+      return `<div class="news-item" data-url="${item.url||''}">
+        <div class="news-headline">${escHtml(item.headline)}</div>
+        <div class="news-meta">
+          <span class="news-source">${escHtml(item.source)}</span>
+          <span>·</span>
+          <span>${dateStr !== 'Heute' ? dateStr + ', ' : ''}${timeStr} Uhr</span>
+        </div>
+      </div>`;
+    }).join('')}</div>`;
+    container.querySelectorAll('[data-url]').forEach(el => {
+      el.addEventListener('click', () => { if (el.dataset.url) window.open(el.dataset.url, '_blank'); });
+    });
+  } catch {
+    container.innerHTML = '<div class="list-group"><div class="list-item" style="cursor:default;"><div style="font-size:14px;color:var(--text-secondary);">Fehler beim Laden der News.</div></div></div>';
+  }
 }
 
 // ── Asset hinzufügen ──────────────────────────────

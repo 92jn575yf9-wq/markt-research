@@ -115,6 +115,45 @@ export default async (req) => {
 
     const symbols = symbolsParam.split(",").map(s => s.trim().toUpperCase());
     const types = typesParam.split(",").map(t => t.trim());
+
+    // Generelle Markt-News (kein Symbol-Filter)
+    if (symbols[0] === "MARKET") {
+      const FINNHUB_KEY = process.env.FINNHUB_KEY;
+      let items = [];
+      if (FINNHUB_KEY) {
+        try {
+          const res = await fetch(`https://finnhub.io/api/v1/news?category=general&token=${FINNHUB_KEY}`);
+          const data = await res.json();
+          if (Array.isArray(data)) {
+            items = data.slice(0, 20).map((n, i) => ({
+              id: `market-${i}`,
+              headline: n.headline,
+              source: n.source,
+              url: n.url,
+              datetime: n.datetime * 1000,
+              relatedSymbol: null,
+            }));
+          }
+        } catch { /* ignorieren */ }
+      }
+      // Yahoo RSS als Fallback
+      if (items.length === 0) {
+        try {
+          const res = await fetch("https://feeds.finance.yahoo.com/rss/2.0/headline?region=US&lang=en-US",
+            { headers: { "User-Agent": "Mozilla/5.0 (compatible; Googlebot/2.1)" } });
+          const text = await res.text();
+          const itemMatches = [...text.matchAll(/<item>([\s\S]*?)<\/item>/g)];
+          items = itemMatches.slice(0, 15).map((m, i) => {
+            const c = m[1];
+            const title = c.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/)?.[1] || c.match(/<title>(.*?)<\/title>/)?.[1] || "";
+            const link = c.match(/<link>(.*?)<\/link>/)?.[1] || "";
+            const pubDate = c.match(/<pubDate>(.*?)<\/pubDate>/)?.[1] || "";
+            return { id: `market-yahoo-${i}`, headline: title.trim(), source: "Yahoo Finance", url: link.trim(), datetime: pubDate ? new Date(pubDate).getTime() : Date.now(), relatedSymbol: null };
+          }).filter(x => x.headline);
+        } catch { /* ignorieren */ }
+      }
+      return new Response(JSON.stringify(items), { status: 200, headers });
+    }
     const FINNHUB_KEY = process.env.FINNHUB_KEY;
 
     const store = getStore(STORE_NAME);
