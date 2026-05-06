@@ -289,7 +289,7 @@ function showView(name) {
 }
 document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => showView(t.dataset.tab)));
 document.querySelectorAll('[data-back]').forEach(b => b.addEventListener('click', () => showView('watchlist')));
-document.getElementById('news-refresh').addEventListener('click', () => { newsCache = null; loadNews(); });
+document.getElementById('news-refresh').addEventListener('click', () => { newsCache = null; loadNews(true); });
 
 // ── Toast ────────────────────────────────────────
 function showToast(msg) {
@@ -312,10 +312,11 @@ async function loadWatchlist() {
 async function saveWatchlist(list) {
   await fetch(`${API}/watchlist`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(list) });
 }
-async function fetchNews(symbols, types) {
+async function fetchNews(symbols, types, forceRefresh = false) {
   const s = symbols.join(',');
   const t = types.join(',');
-  const res = await fetch(`${API}/fetch-news?symbols=${s}&types=${t}`);
+  const refresh = forceRefresh ? '&refresh=1' : '';
+  const res = await fetch(`${API}/fetch-news?symbols=${s}&types=${t}${refresh}`);
   return res.ok ? res.json() : [];
 }
 
@@ -415,7 +416,7 @@ function renderCard(a) {
 }
 
 // ── News rendern ──────────────────────────────────
-async function loadNews() {
+async function loadNews(forceRefresh = false) {
   const container = document.getElementById('news-content');
   const subtitle = document.getElementById('news-subtitle');
 
@@ -432,7 +433,7 @@ async function loadNews() {
   try {
     const symbols = watchlist.map(a => a.symbol);
     const types = watchlist.map(a => a.type);
-    const news = await fetchNews(symbols, types);
+    const news = await fetchNews(symbols, types, forceRefresh);
     newsCache = news;
     renderNews(news);
     subtitle.textContent = `${news.length} Artikel · ${new Date().toLocaleTimeString('de-DE', {hour:'2-digit',minute:'2-digit'})} Uhr`;
