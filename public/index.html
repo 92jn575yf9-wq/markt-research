@@ -775,56 +775,87 @@ function renderDetail(a) {
   const cc = (a.changePercent||0) >= 0 ? 'pos' : 'neg';
   const v = a.verdict || 'neu';
   const vl = { akku:'Akkumulieren', halten:'Halten', beobachten:'Beobachten', risiko:'Risiko', neu:'Ausstehend' }[v];
-  const dots = Array.from({length:5},(_,i) => `<span class="dot${i<(a.dcaScore||0)?' on':''}"></span>`).join('');
+  const dots = Array.from({length:5},(_,i) => '<span class="dot'+(i<(a.dcaScore||0)?' on':'')+'"></span>').join('');
   const typeLabel = { stock:'Aktie', etf:'ETF', crypto:'Krypto' }[a.type] || a.type;
-  document.getElementById('detail-content').innerHTML = `
-    <div class="detail-hero">
-      <div class="detail-badges">
-        <span class="badge ${a.type==='crypto'?'krypto':a.type}">${typeLabel}</span>
-        ${a.isin ? `<span class="badge isin">${a.isin}</span>` : ''}
-      </div>
-      <h1 class="large-title" style="padding:0;margin-bottom:2px;">${a.symbol}</h1>
-      <div class="detail-name">${a.name||a.symbol}</div>
-      <div class="detail-price-line">
-        <span class="detail-price">${fmtPrice(a.price, a.currency)}</span>
-        <span class="detail-change ${cc}">${fmtPct(a.changePercent)} heute</span>
-      </div>
-    </div>
-    <div class="verdict-hero">
-      <div class="verdict-hero-label">Empfehlung für deinen Sparplan</div>
-      <div class="verdict-hero-row">
-        <span class="verdict-hero-value ${v}">${vl}</span>
-        <span class="verdict-pill ${v}">DCA-Score</span>
-      </div>
-      <div class="verdict-hero-meta">
-        <span class="dca-bar">
-          <span style="font-weight:500;color:var(--text)">${a.dcaScore||0} / 5</span>
-          <span class="dots">${dots}</span>
-        </span>
-        <span>${a.analysisAge || 'Noch nicht analysiert'}</span>
-      </div>
-    </div>
+  const analysisHtml = a.analysis ? renderAnalysis(a.analysis) : '<div class="list-group"><div class="list-item" style="cursor:default;"><div style="font-size:14px;color:var(--text-secondary);line-height:1.45;">Noch keine Analyse vorhanden. Tippe auf \"Jetzt analysieren\" um Claude zu beauftragen.</div></div></div>';
 
-    <div class="list-group">
-      <div class="list-item" style="cursor:default;">
-        <div style="font-size:14px;color:var(--text-secondary);line-height:1.45;">
-          Noch keine Analyse vorhanden. Tippe auf "Jetzt analysieren" um Claude zu beauftragen.
-        </div>
-      </div>
-    </div>
-    <div class="detail-actions">
-      <button class="btn btn-secondary" id="btn-remove">Entfernen</button>
-      <button class="btn btn-primary" id="btn-analyze">Jetzt analysieren</button>
-    </div>`;
+  document.getElementById('detail-content').innerHTML =
+    '<div class="detail-hero">' +
+      '<div class="detail-badges">' +
+        '<span class="badge '+(a.type==='crypto'?'krypto':a.type)+'">'+typeLabel+'</span>' +
+        (a.isin ? '<span class="badge isin">'+a.isin+'</span>' : '') +
+      '</div>' +
+      '<h1 class="large-title" style="padding:0;margin-bottom:2px;">'+a.symbol+'</h1>' +
+      '<div class="detail-name">'+(a.name||a.symbol)+'</div>' +
+      '<div class="detail-price-line">' +
+        '<span class="detail-price">'+fmtPrice(a.price, a.currency)+'</span>' +
+        '<span class="detail-change '+cc+'">'+fmtPct(a.changePercent)+' heute</span>' +
+      '</div>' +
+    '</div>' +
+    '<div class="chart-card"><div id="chart-wrap" class="chart-wrap"><div class="chart-placeholder">Chart wird geladen…</div></div></div>' +
+    '<div class="verdict-hero">' +
+      '<div class="verdict-hero-label">Empfehlung für deinen Sparplan</div>' +
+      '<div class="verdict-hero-row">' +
+        '<span class="verdict-hero-value '+v+'">'+vl+'</span>' +
+        '<span class="verdict-pill '+v+'">DCA-Score</span>' +
+      '</div>' +
+      '<div class="verdict-hero-meta">' +
+        '<span class="dca-bar"><span style="font-weight:500;color:var(--text)">'+(a.dcaScore||0)+' / 5</span><span class="dots">'+dots+'</span></span>' +
+        '<span>'+(a.analysisAge || 'Noch nicht analysiert')+'</span>' +
+      '</div>' +
+    '</div>' +
+    '<div class="group-header">KI-Analyse</div>' +
+    analysisHtml +
+    '<div class="group-header">Aktuelle News</div>' +
+    '<div id="detail-news-content"><div class="list-group"><div class="news-loading"><div class="spinner"></div><br>News werden geladen…</div></div></div>' +
+    '<div class="detail-actions">' +
+      '<button class="btn btn-secondary" id="btn-remove">Entfernen</button>' +
+      '<button class="btn btn-primary" id="btn-analyze">Jetzt analysieren</button>' +
+    '</div>';
+
   document.getElementById('btn-remove').addEventListener('click', () => {
     watchlist = watchlist.filter(x => x.symbol !== a.symbol);
     saveWatchlist(watchlist); renderWatchlist(); showView('watchlist');
   });
   document.getElementById('btn-analyze').addEventListener('click', () => runAnalysis(a));
-
-  // News für dieses Asset laden
+  loadDetailChart(a);
   loadDetailNews(a);
 }
+
+async function loadDetailChart(a) {
+  const wrap = document.getElementById('chart-wrap');
+  if (!wrap) return;
+  try {
+    const res = await fetch(API+'/fetch-chart?symbol='+a.symbol+'&type='+a.type);
+    const data = await res.json();
+    const prices = (data.prices||[]).filter(p => p !== null);
+    if (prices.length < 2) { wrap.innerHTML = '<div class="chart-placeholder">Keine Kursdaten</div>'; return; }
+    const mn = Math.min(...prices), mx = Math.max(...prices), rng = mx-mn||1;
+    const W=320, H=100, pad=4;
+    const pts = prices.map((p,i) => {
+      const x = (i/(prices.length-1))*W;
+      const y = H-pad-((p-mn)/rng)*(H-pad*2);
+      return x.toFixed(1)+','+y.toFixed(1);
+    }).join(' ');
+    const isUp = prices[prices.length-1] >= prices[0];
+    const col = isUp ? 'var(--green)' : 'var(--red)';
+    wrap.innerHTML =
+      '<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none">' +
+        '<defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1">' +
+          '<stop offset="0%" style="stop-color:'+col+';stop-opacity:0.25"/>' +
+          '<stop offset="100%" style="stop-color:'+col+';stop-opacity:0"/>' +
+        '</linearGradient></defs>' +
+        '<polygon points="0,'+H+' '+pts+' '+W+','+H+'" fill="url(#cg)"/>' +
+        '<polyline points="'+pts+'" fill="none" stroke="'+col+'" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>' +
+      '</svg>' +
+      '<div style="display:flex;justify-content:space-between;margin-top:4px;font-size:11px;color:var(--text-tertiary);">' +
+        '<span>'+fmtPrice(prices[0],a.currency)+'</span>' +
+        '<span style="color:var(--text-secondary);font-size:10px;">30 Tage</span>' +
+        '<span>'+fmtPrice(prices[prices.length-1],a.currency)+'</span>' +
+      '</div>';
+  } catch { wrap.innerHTML = '<div class="chart-placeholder">Chart nicht verfügbar</div>'; }
+}
+
 
 async function loadDetailNews(a) {
   const container = document.getElementById('detail-news-content');
