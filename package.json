@@ -5,5 +5,8 @@
   "description": "Persönliches Markt-Research & Investitions-Tool",
   "engines": {
     "node": ">=18"
+  },
+  "dependencies": {
+    "@netlify/blobs": "^8.1.0"
   }
 }
