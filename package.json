@@ -1,0 +1,9 @@
+{
+  "name": "markt-research",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Persönliches Markt-Research & Investitions-Tool",
+  "engines": {
+    "node": ">=18"
+  }
+}
