@@ -1288,10 +1288,18 @@ document.getElementById('sim-add-btn').addEventListener('click', function() {
   const chips = document.getElementById('sim-wl-chips');
   if (watchlist.length > 0) {
     quickBlock.style.display = '';
+    const verdictLabel = {akku:'Kaufen', beobachten:'Abwarten', halten:'Abwarten', risiko:'Vorsicht', neu:''};
+    const verdictColor = {akku:'var(--accent)', beobachten:'var(--blue)', halten:'var(--orange)', risiko:'var(--red)', neu:'var(--text-tertiary)'};
     chips.innerHTML = watchlist.map(function(a) {
+      const v = a.verdict || 'neu';
+      const vLabel = verdictLabel[v] || '';
+      const vColor = verdictColor[v] || 'var(--text-tertiary)';
+      const dot = '<span style="width:6px;height:6px;border-radius:50%;background:'+vColor+';flex-shrink:0;display:inline-block;"></span>';
+      const verdictBit = vLabel ? '<span style="font-size:10px;font-weight:600;color:'+vColor+';">'+vLabel+'</span>' : '';
       return '<div class="wl-chip" data-symbol="'+a.symbol+'" data-type="'+a.type+'" data-name="'+escHtml(a.name||a.symbol)+'">' +
+        dot +
         '<span class="wl-chip-symbol">'+a.symbol+'</span>' +
-        '<span class="wl-chip-type">'+({stock:'Aktie',etf:'ETF',crypto:'Krypto'}[a.type]||a.type)+'</span>' +
+        verdictBit +
       '</div>';
     }).join('');
     chips.querySelectorAll('.wl-chip').forEach(function(chip) {
