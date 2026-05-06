@@ -497,6 +497,102 @@ function renderNews(news) {
   });
 }
 
+// ── KI-Analyse ────────────────────────────────
+async function runAnalysis(a, forceRefresh = false) {
+  const btn = document.getElementById('btn-analyze');
+  if (!btn) return;
+  btn.textContent = 'Analysiere…';
+  btn.disabled = true;
+  try {
+    // Aktuelle News für dieses Asset holen
+    let news = [];
+    try {
+      const nr = await fetch(`${API}/fetch-news?symbols=${a.symbol}&types=${a.type}`);
+      if (nr.ok) news = await nr.json();
+    } catch { /* News optional */ }
+    const res = await fetch(`${API}/analyze`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        symbol: a.symbol, type: a.type, name: a.name,
+        price: a.price, changePercent: a.changePercent,
+        news: news.filter(n => n.relatedSymbol === a.symbol),
+        forceRefresh,
+      }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const analysis = await res.json();
+    // Watchlist-Eintrag aktualisieren
+    const idx = watchlist.findIndex(x => x.symbol === a.symbol);
+    if (idx >= 0) {
+      watchlist[idx].verdict = analysis.verdict;
+      watchlist[idx].dcaScore = analysis.dcaScore;
+      watchlist[idx].analysisAge = 'Gerade eben';
+      watchlist[idx].analysis = analysis;
+      await saveWatchlist(watchlist);
+      renderWatchlist();
+      renderDetail(watchlist[idx]);
+    }
+    showToast('✓ Analyse abgeschlossen');
+  } catch(err) {
+    console.error(err);
+    showToast('Fehler bei der Analyse: ' + err.message.slice(0,40));
+    if (btn) { btn.textContent = 'Jetzt analysieren'; btn.disabled = false; }
+  }
+}
+
+
+// ── Analyse rendern ──────────────────────────────
+function renderAnalysis(an) {
+  const signal = { positiv: '📈', neutral: '➡️', negativ: '📉' }[an.newsSignal] || '➡️';
+  const pros = (an.pro||[]).map(p =>
+    `<li>${escHtml(p.text)}${p.source ? `<span class="reason-source">[${escHtml(p.source)}]</span>` : ''}</li>`
+  ).join('');
+  const cons = (an.contra||[]).map(c =>
+    `<li>${escHtml(c.text)}</li>`
+  ).join('');
+  const risks = (an.risiken||[]).map(r =>
+    `<li>${escHtml(r.text)}${r.source ? `<span class="reason-source">[${escHtml(r.source)}]</span>` : ''}</li>`
+  ).join('');
+
+  return `
+    <div class="list-group" style="padding:0;">
+      <div class="reason-block">
+        <div class="reason-title pro">
+          <span class="ico">✓</span> Pro <span style="color:var(--text-secondary);font-weight:400">(${(an.pro||[]).length})</span>
+        </div>
+        <ul class="reason-list">${pros}</ul>
+      </div>
+      ${cons ? `<div class="reason-block">
+        <div class="reason-title con">
+          <span class="ico">!</span> Contra <span style="color:var(--text-secondary);font-weight:400">(${(an.contra||[]).length})</span>
+        </div>
+        <ul class="reason-list">${cons}</ul>
+      </div>` : ''}
+      ${risks ? `<div class="reason-block">
+        <div class="reason-title flag">
+          <span class="ico">⚠</span> Risiko-Flags <span style="color:var(--text-secondary);font-weight:400">(${(an.risiken||[]).length})</span>
+        </div>
+        <ul class="reason-list">${risks}</ul>
+      </div>` : ''}
+    </div>
+    ${an.newsSignal ? `
+    <div class="group-header">News-Signal</div>
+    <div class="list-group">
+      <div class="list-item" style="cursor:default;">
+        <div style="font-size:15px;margin-bottom:6px;">${signal} <strong>${{ positiv:'Positiv', neutral:'Neutral', negativ:'Negativ' }[an.newsSignal]}</strong></div>
+        <div style="font-size:14px;color:var(--text-secondary);">${escHtml(an.newsKommentar||'')}</div>
+      </div>
+    </div>` : ''}
+    ${an.geaendertSeit ? `
+    <div class="group-header">Geändert seit letzter Analyse</div>
+    <div class="list-group">
+      <div class="list-item" style="cursor:default;">
+        <div style="font-size:14px;line-height:1.45;">${escHtml(an.geaendertSeit)}</div>
+      </div>
+    </div>` : ''}`;
+}
+
 function escHtml(str) {
   return (str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
@@ -535,7 +631,7 @@ function renderDetail(a) {
         <span>${a.analysisAge || 'Noch nicht analysiert'}</span>
       </div>
     </div>
-    <div class="group-header">KI-Analyse</div>
+
     <div class="list-group">
       <div class="list-item" style="cursor:default;">
         <div style="font-size:14px;color:var(--text-secondary);line-height:1.45;">
@@ -551,8 +647,8 @@ function renderDetail(a) {
     watchlist = watchlist.filter(x => x.symbol !== a.symbol);
     saveWatchlist(watchlist); renderWatchlist(); showView('watchlist');
   });
-  document.getElementById('btn-analyze').addEventListener('click', () => {
-    showToast('KI-Analyse kommt in Schritt 4 🤖');
+  document.getElementById('btn-analyze').addEventListener('click', () => runAnalysis(a));
+
   });
 }
 
