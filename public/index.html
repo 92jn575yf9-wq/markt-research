@@ -713,7 +713,7 @@ function renderCard(a) {
   return '<div class="list-item" data-symbol="'+a.symbol+'">' +
     '<div class="asset-row">' +
       '<div class="asset-info">' +
-        '<div class="asset-symbol">'+a.symbol+'</div>' +
+        '<div class="asset-symbol">'+a.symbol+(simPortfolio.some(function(p){return p.symbol===a.symbol;})?'<span style="font-size:9px;font-weight:700;letter-spacing:0.3px;background:var(--blue-soft);color:var(--blue);padding:2px 6px;border-radius:4px;margin-left:6px;vertical-align:middle;">SIM</span>':'')+'</div>' +
         '<div class="asset-name">'+(a.name||a.symbol)+'</div>' +
       '</div>' +
       '<div>' +
