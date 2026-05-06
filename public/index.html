@@ -180,6 +180,37 @@
 
   .detail-actions { padding: 16px; display: flex; gap: 8px; }
 
+  .search-results {
+    background: var(--bg-card-2);
+    border-radius: 10px;
+    margin-top: 6px;
+    overflow: hidden;
+    display: none;
+  }
+  .search-results.open { display: block; }
+  .search-result-item {
+    padding: 11px 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    position: relative;
+  }
+  .search-result-item:active { opacity: 0.7; }
+  .search-result-item + .search-result-item::before {
+    content: ''; position: absolute; top: 0; left: 14px; right: 0;
+    height: 0.5px; background: var(--separator);
+  }
+  .sri-symbol {
+    font-size: 14px; font-weight: 700;
+    min-width: 52px; color: var(--accent);
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  .sri-info { flex: 1; min-width: 0; }
+  .sri-name { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sri-type { font-size: 11px; color: var(--text-secondary); margin-top: 1px; }
+  .search-spinner { text-align: center; padding: 12px; color: var(--text-secondary); font-size: 13px; }
+
   .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: var(--red); color: #fff; padding: 10px 18px; border-radius: 20px; font-size: 14px; font-weight: 500; z-index: 300; opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap; }
   .toast.show { opacity: 1; }
 </style>
@@ -236,17 +267,21 @@
   <div class="modal-sheet">
     <div class="modal-title">Asset hinzufügen</div>
     <div class="modal-field">
-      <div class="modal-label">Symbol (z.B. AAPL, IWDA, BTC)</div>
-      <input class="modal-input" id="input-symbol" type="text" placeholder="Symbol eingeben" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false">
+      <div class="modal-label">Firmenname oder Symbol suchen</div>
+      <input class="modal-input" id="input-search" type="text" placeholder="z.B. Apple, MSCI World, Bitcoin…" autocomplete="off" autocorrect="off" spellcheck="false">
+      <div class="search-results" id="search-results"></div>
     </div>
-    <div class="modal-field">
-      <div class="modal-label">Typ</div>
-      <select class="modal-select" id="input-type">
-        <option value="stock">Aktie</option>
-        <option value="etf">ETF</option>
-        <option value="crypto">Krypto</option>
-      </select>
+    <div class="modal-field" id="selected-asset-block" style="display:none;">
+      <div style="background:var(--accent-soft);border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:10px;">
+        <div style="flex:1;">
+          <div style="font-size:15px;font-weight:700;" id="selected-symbol-display"></div>
+          <div style="font-size:13px;color:var(--text-secondary);margin-top:2px;" id="selected-name-display"></div>
+        </div>
+        <button onclick="clearSelection()" style="background:none;border:none;color:var(--text-secondary);font-size:18px;cursor:pointer;padding:4px;">✕</button>
+      </div>
     </div>
+    <input type="hidden" id="input-symbol">
+    <input type="hidden" id="input-type" value="stock">
     <div class="modal-field">
       <div class="modal-label">Notiz (optional)</div>
       <input class="modal-input" id="input-note" type="text" placeholder="z.B. Kerninvestment Sparplan">
@@ -653,9 +688,72 @@ function renderDetail(a) {
 }
 
 // ── Asset hinzufügen ──────────────────────────────
+// ── Symbol-Suche ──────────────────────────────────
+let searchTimer = null;
+let selectedAsset = null;
+
+function clearSelection() {
+  selectedAsset = null;
+  document.getElementById('selected-asset-block').style.display = 'none';
+  document.getElementById('input-search').value = '';
+  document.getElementById('input-symbol').value = '';
+  document.getElementById('input-type').value = 'stock';
+  document.getElementById('search-results').innerHTML = '';
+  document.getElementById('search-results').classList.remove('open');
+  document.getElementById('input-search').focus();
+}
+
+function selectAsset(result) {
+  selectedAsset = result;
+  document.getElementById('input-symbol').value = result.symbol;
+  document.getElementById('input-type').value = result.type;
+  document.getElementById('selected-symbol-display').textContent = result.symbol;
+  document.getElementById('selected-name-display').textContent = result.name;
+  document.getElementById('selected-asset-block').style.display = 'block';
+  document.getElementById('search-results').classList.remove('open');
+  document.getElementById('input-search').value = '';
+}
+
+async function searchSymbol(q) {
+  const container = document.getElementById('search-results');
+  if (!q || q.length < 2) { container.classList.remove('open'); return; }
+  container.innerHTML = '<div class="search-spinner">Suche…</div>';
+  container.classList.add('open');
+  try {
+    const res = await fetch(`${API}/search-symbol?q=${encodeURIComponent(q)}`);
+    const results = await res.json();
+    if (!results.length) {
+      container.innerHTML = '<div class="search-spinner">Keine Ergebnisse</div>';
+      return;
+    }
+    const typeLabel = { stock:'Aktie', etf:'ETF', crypto:'Krypto' };
+    container.innerHTML = results.map(r => `
+      <div class="search-result-item" data-symbol="${r.symbol}" data-type="${r.type}" data-name="${r.name.replace(/"/g,'&quot;')}">
+        <div class="sri-symbol">${r.symbol}</div>
+        <div class="sri-info">
+          <div class="sri-name">${r.name}</div>
+          <div class="sri-type">${typeLabel[r.type]||r.type} · ${r.exchange}</div>
+        </div>
+      </div>`).join('');
+    container.querySelectorAll('.search-result-item').forEach(el => {
+      el.addEventListener('click', () => selectAsset({
+        symbol: el.dataset.symbol,
+        type: el.dataset.type,
+        name: el.dataset.name,
+      }));
+    });
+  } catch { container.innerHTML = '<div class="search-spinner">Fehler bei der Suche</div>'; }
+}
+
+document.getElementById('input-search').addEventListener('input', e => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => searchSymbol(e.target.value.trim()), 350);
+});
+
 document.getElementById('add-btn').addEventListener('click', () => {
+  clearSelection();
   document.getElementById('add-modal').classList.add('open');
-  setTimeout(() => document.getElementById('input-symbol').focus(), 100);
+  setTimeout(() => document.getElementById('input-search').focus(), 100);
 });
 document.getElementById('modal-cancel').addEventListener('click', () => {
   document.getElementById('add-modal').classList.remove('open');
@@ -664,15 +762,15 @@ document.getElementById('modal-add').addEventListener('click', async () => {
   const symbol = document.getElementById('input-symbol').value.trim().toUpperCase();
   const type = document.getElementById('input-type').value;
   const note = document.getElementById('input-note').value.trim();
-  if (!symbol) { showToast('Bitte Symbol eingeben'); return; }
+  if (!symbol) { showToast('Bitte ein Asset auswählen'); return; }
   if (watchlist.find(a => a.symbol === symbol)) { showToast(`${symbol} bereits in der Watchlist`); return; }
   document.getElementById('add-modal').classList.remove('open');
-  document.getElementById('input-symbol').value = '';
   document.getElementById('input-note').value = '';
-  const newAsset = { symbol, type, note, verdict: null, dcaScore: 0, price: null, changePercent: undefined };
+  const assetName = selectedAsset?.name || symbol;
+  const newAsset = { symbol, type, name: assetName, note, verdict: null, dcaScore: 0, price: null, changePercent: undefined };
   watchlist.push(newAsset);
   renderWatchlist();
-  newsCache = null; // News-Cache invalidieren
+  newsCache = null;
   try {
     const q = await fetchQuote(symbol, type);
     const idx = watchlist.findIndex(a => a.symbol === symbol);
