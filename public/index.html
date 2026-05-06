@@ -351,6 +351,17 @@
   .item-details { display: none; padding: 0 16px 14px; border-top: 0.5px solid var(--separator); }
   .list-item.collapsible.open .item-details { display: block; }
 
+
+  .pl-pos { color: var(--green) !important; }
+  .pl-neg { color: var(--red) !important; }
+  .sim-pos-symbol { font-size: 16px; font-weight: 700; letter-spacing: -0.4px; }
+  .sim-pos-name { font-size: 12px; color: var(--text-secondary); margin-top: 1px; }
+  .sim-pos-type { font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 4px; background: var(--blue-soft); color: var(--blue); margin-top: 5px; display: inline-block; }
+  .sim-pos-type.dca { background: var(--accent-soft); color: var(--accent); }
+  .sim-pos-value { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
+  .sim-pos-pl { font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 500; text-align: right; margin-top: 2px; }
+  .sim-del-btn { background: var(--red-soft); color: var(--red); border: none; border-radius: 8px; padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; margin-top: 10px; }
+
 </style>
 </head>
 <body>
@@ -1370,11 +1381,11 @@ function renderSimulator() {
           '<div class="sim-stat-lbl">Investiert</div>' +
         '</div>' +
         '<div class="sim-stat">' +
-          '<div class="sim-stat-val ' + (totalPl>=0?'pl-pos':'pl-neg') + '">' + (totalPl >= 0 ? '+' : '') + fmtEur(totalPl) + '</div>' +
+          '<div class="sim-stat-val" style="color:' + (totalPl>=0?'var(--green)':'var(--red)') + '">' + (totalPl >= 0 ? '+' : '') + fmtEur(totalPl) + '</div>' +
           '<div class="sim-stat-lbl">Gewinn/Verlust</div>' +
         '</div>' +
         '<div class="sim-stat">' +
-          '<div class="sim-stat-val ' + (totalPlPct>=0?'pl-pos':'pl-neg') + '">' + (totalPlPct >= 0 ? '+' : '') + totalPlPct.toFixed(2) + '%</div>' +
+          '<div class="sim-stat-val" style="color:' + (totalPlPct>=0?'var(--green)':'var(--red)') + '">' + (totalPlPct >= 0 ? '+' : '') + totalPlPct.toFixed(2) + '%</div>' +
           '<div class="sim-stat-lbl">Rendite</div>' +
         '</div>' +
       '</div>' +
@@ -1382,39 +1393,59 @@ function renderSimulator() {
 
   let posHtml = '<div class="group-header">Positionen</div><div class="list-group">';
   simPortfolio.forEach(function(pos) {
-    const plClass = (pos.pl||0) >= 0 ? 'pos' : 'neg';
     const plSign = (pos.pl||0) >= 0 ? '+' : '';
-    const typeLabel = pos.simType === 'dca' ? 'DCA · ' + (pos.months||1) + ' Monate' : 'Einzelkauf';
-    const detail = pos.simType === 'single'
-      ? '<span>Einstieg: <b>' + fmtEur(pos.buyPrice) + '</b></span><span>Stück: <b>' + pos.shares + '</b></span><span>Heute: <b>' + fmtEur(pos.currentPrice) + '</b></span>'
-      : '<span>Monatlich: <b>' + fmtEur(pos.monthlyAmount) + '</b></span><span>Seit: <b>' + new Date(pos.startDate).toLocaleDateString('de-DE',{month:'short',year:'numeric'}) + '</b></span>';
+    const plColorClass = (pos.pl||0) >= 0 ? 'pl-pos' : 'pl-neg';
+    const typeLabel = pos.simType === 'dca'
+      ? 'DCA · ' + (pos.months||1) + ' Monate'
+      : 'Einzelkauf';
+    const detailHtml = pos.simType === 'single'
+      ? '<span>Einstieg: <b>' + fmtEur(pos.buyPrice) + '</b></span>' +
+        '<span>Stück: <b>' + pos.shares + '</b></span>' +
+        '<span>Heute: <b>' + fmtEur(pos.currentPrice) + '</b></span>'
+      : '<span>Monatlich: <b>' + fmtEur(pos.monthlyAmount) + '</b></span>' +
+        '<span>Seit: <b>' + new Date(pos.startDate).toLocaleDateString('de-DE',{month:'short',year:'numeric'}) + '</b></span>';
 
     posHtml +=
-      '<div class="sim-position">' +
-        '<div class="sim-pos-row">' +
-          '<div>' +
-            '<div class="sim-pos-symbol">' + pos.symbol + '</div>' +
+      // Wrapper — data-pos-id für Toggle, standardmässig GESCHLOSSEN
+      '<div class="sim-position" data-pos-id="' + pos.id + '">' +
+
+        // ── Immer sichtbar: Header ──────────────────
+        '<div class="sim-pos-header">' +
+          '<div style="min-width:0;flex:1;">' +
+            '<div style="display:flex;align-items:center;gap:6px;">' +
+              '<span class="sim-pos-symbol">' + pos.symbol + '</span>' +
+              '<span class="sim-pos-type ' + pos.simType + '">' + typeLabel + '</span>' +
+            '</div>' +
             '<div class="sim-pos-name">' + escHtml(pos.name||pos.symbol) + '</div>' +
-            '<span class="sim-pos-type ' + pos.simType + '">' + typeLabel + '</span>' +
           '</div>' +
-          '<div>' +
+          '<div style="flex-shrink:0;text-align:right;">' +
             '<div class="sim-pos-value">' + fmtEur(pos.currentValue||0) + '</div>' +
-            '<div class="sim-pos-pl ' + ((pos.pl||0)>=0?'pl-pos':'pl-neg') + '">' + plSign + fmtEur(pos.pl||0) + ' (' + plSign + (pos.plPct||0).toFixed(2) + '%)</div>' +
+            '<div class="sim-pos-pl ' + plColorClass + '">' +
+              plSign + fmtEur(pos.pl||0) + ' (' + plSign + (pos.plPct||0).toFixed(2) + '%)' +
+            '</div>' +
           '</div>' +
+          '<div class="sim-pos-chevron">›</div>' +
         '</div>' +
-        '<div class="sim-pos-detail">' + detail +
-          '<span style="margin-left:auto;"><button class="sim-del-btn" data-id="' + pos.id + '">Entfernen</button></span>' +
+
+        // ── Nur bei .open sichtbar: Details ─────────
+        '<div class="sim-pos-details">' +
+          '<div class="sim-pos-detail-grid">' + detailHtml + '</div>' +
+          '<button class="sim-del-btn" data-id="' + pos.id + '">Entfernen</button>' +
         '</div>' +
+
       '</div>';
   });
   posHtml += '</div>';
   content.innerHTML = posHtml;
 
+  // Toggle: Header antippen = aufklappen/zuklappen
   content.querySelectorAll('[data-pos-id]').forEach(function(el) {
     el.querySelector('.sim-pos-header').addEventListener('click', function() {
       el.classList.toggle('open');
     });
   });
+
+  // Entfernen-Button
   content.querySelectorAll('.sim-del-btn').forEach(function(btn) {
     btn.addEventListener('click', async function(e) {
       e.stopPropagation();
