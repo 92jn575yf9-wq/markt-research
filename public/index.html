@@ -269,6 +269,32 @@
   .cluster-item-meta { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; }
   .cluster-item-arrow { color: var(--text-tertiary); font-size: 16px; flex-shrink: 0; }
 
+
+  /* Simulator */
+  .sim-summary-card { background: var(--bg-card); border-radius: 14px; margin: 0 16px 8px; padding: 16px; box-shadow: var(--shadow-sm); }
+  .sim-total { font-size: 36px; font-weight: 700; letter-spacing: -1px; font-variant-numeric: tabular-nums; }
+  .sim-total-label { font-size: 12px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 4px; }
+  .sim-stats { display: flex; gap: 0; margin-top: 14px; padding-top: 14px; border-top: 0.5px solid var(--separator); }
+  .sim-stat { flex: 1; text-align: center; }
+  .sim-stat + .sim-stat { border-left: 0.5px solid var(--separator); }
+  .sim-stat-val { font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .sim-stat-lbl { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+  .sim-position { padding: 14px 16px; position: relative; cursor: pointer; }
+  .sim-position:active { background: var(--bg-card-2); }
+  .sim-position + .sim-position { border-top: 0.5px solid var(--separator); }
+  .sim-pos-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+  .sim-pos-symbol { font-size: 16px; font-weight: 700; letter-spacing: -0.4px; }
+  .sim-pos-name { font-size: 12px; color: var(--text-secondary); margin-top: 1px; }
+  .sim-pos-type { font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 4px; background: var(--blue-soft); color: var(--blue); margin-top: 4px; display: inline-block; }
+  .sim-pos-type.dca { background: var(--accent-soft); color: var(--accent); }
+  .sim-pos-value { text-align: right; font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .sim-pos-pl { font-size: 12px; margin-top: 2px; font-variant-numeric: tabular-nums; font-weight: 500; }
+  .sim-pos-pl.pos { color: var(--green); }
+  .sim-pos-pl.neg { color: var(--red); }
+  .sim-pos-detail { display: flex; gap: 16px; margin-top: 10px; padding-top: 10px; border-top: 0.5px solid var(--separator); font-size: 12px; color: var(--text-secondary); }
+  .sim-pos-detail span b { color: var(--text); font-weight: 600; }
+  .sim-del-btn { background: var(--red-soft); color: var(--red); border: none; border-radius: 8px; padding: 5px 10px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; }
+
 </style>
 </head>
 <body>
@@ -314,6 +340,74 @@
   <div id="detail-content"></div>
 </div>
 
+<!-- SIMULATOR -->
+<div class="view" data-view="simulator">
+  <div class="nav-bar">
+    <span></span>
+    <button class="nav-btn icon" id="sim-add-btn">+</button>
+  </div>
+  <h1 class="large-title">Simulator</h1>
+  <div class="subtitle" id="sim-subtitle">Fiktives Portfolio</div>
+  <div id="sim-summary"></div>
+  <div id="sim-content"></div>
+</div>
+
+<!-- SIM ADD MODAL -->
+<div class="modal-overlay" id="sim-modal">
+  <div class="modal-sheet">
+    <div class="modal-title">Position simulieren</div>
+    <div class="modal-field">
+      <div class="modal-label">Asset suchen</div>
+      <input class="modal-input" id="sim-search" type="text" placeholder="z.B. Apple, Bitcoin, MSCI World…" autocomplete="off" autocorrect="off" spellcheck="false">
+      <div class="search-results" id="sim-search-results"></div>
+    </div>
+    <div id="sim-selected-block" style="display:none;">
+      <div style="background:var(--accent-soft);border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+        <div style="flex:1;">
+          <div style="font-size:15px;font-weight:700;" id="sim-sel-symbol"></div>
+          <div style="font-size:13px;color:var(--text-secondary);margin-top:2px;" id="sim-sel-name"></div>
+        </div>
+        <button onclick="clearSimSelection()" style="background:none;border:none;color:var(--text-secondary);font-size:18px;cursor:pointer;">✕</button>
+      </div>
+      <div class="modal-field">
+        <div class="modal-label">Simulationstyp</div>
+        <select class="modal-select" id="sim-type-select">
+          <option value="single">Einzelkauf — ich kaufe X Stück zu Y Kurs</option>
+          <option value="dca">DCA — ich investiere X € monatlich</option>
+        </select>
+      </div>
+      <div id="sim-single-fields">
+        <div class="modal-field">
+          <div class="modal-label">Kaufkurs (€)</div>
+          <input class="modal-input" id="sim-buy-price" type="number" step="0.01" placeholder="z.B. 180.50">
+        </div>
+        <div class="modal-field">
+          <div class="modal-label">Anzahl Stück</div>
+          <input class="modal-input" id="sim-shares" type="number" step="0.001" placeholder="z.B. 10">
+        </div>
+        <div class="modal-field">
+          <div class="modal-label">Kaufdatum</div>
+          <input class="modal-input" id="sim-buy-date" type="date">
+        </div>
+      </div>
+      <div id="sim-dca-fields" style="display:none;">
+        <div class="modal-field">
+          <div class="modal-label">Monatlicher Betrag (€)</div>
+          <input class="modal-input" id="sim-monthly" type="number" step="1" placeholder="z.B. 200">
+        </div>
+        <div class="modal-field">
+          <div class="modal-label">Startdatum</div>
+          <input class="modal-input" id="sim-start-date" type="date">
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="sim-cancel">Abbrechen</button>
+      <button class="btn btn-primary" id="sim-confirm">Hinzufügen</button>
+    </div>
+  </div>
+</div>
+
 <!-- TAB BAR -->
 <nav class="tab-bar">
   <div class="tab-bar-inner">
@@ -324,6 +418,10 @@
     <button class="tab" data-tab="news">
       <svg viewBox="0 0 24 24"><path d="M20 3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H4V5h16v14zM6 7h8v2H6zm0 4h8v2H6zm0 4h5v2H6zm9-2h4v4h-4z"/></svg>
       <span class="tab-label">News</span>
+    </button>
+    <button class="tab" data-tab="simulator">
+      <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14l-5-5 1.41-1.41L12 14.17l7.59-7.59L21 8l-9 9z"/></svg>
+      <span class="tab-label">Simulator</span>
     </button>
   </div>
 </nav>
@@ -387,6 +485,7 @@ function showView(name) {
   else document.querySelector('.tab[data-tab="watchlist"]').classList.add('active');
   window.scrollTo(0, 0);
   if (name === 'news') { loadNews(); loadSuggestions(); }
+  if (name === 'simulator') { refreshSimPrices().then(function() { renderSimulator(); }); }
 }
 document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => showView(t.dataset.tab)));
 document.querySelectorAll('[data-back]').forEach(b => b.addEventListener('click', () => showView('watchlist')));
@@ -1028,9 +1127,293 @@ document.getElementById('modal-add').addEventListener('click', async () => {
   }
 });
 
+
+// ═══════════════ SIMULATOR ═══════════════
+let simPortfolio = []; // [{id, symbol, name, type, assetType, currency, simType, buyPrice, shares, invested, monthlyAmount, startDate, buyDate, currentPrice, currentValue, pl, plPct}]
+let simSearchTimer = null;
+let simSelectedAsset = null;
+
+async function loadSimPortfolio() {
+  try {
+    const res = await fetch(API + '/simulator-portfolio');
+    simPortfolio = res.ok ? await res.json() : [];
+  } catch { simPortfolio = []; }
+}
+
+async function saveSimPortfolio() {
+  await fetch(API + '/simulator-portfolio', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(simPortfolio)
+  });
+}
+
+async function refreshSimPrices() {
+  if (!simPortfolio.length) return;
+  await Promise.all(simPortfolio.map(async pos => {
+    try {
+      const res = await fetch(API + '/fetch-quote?symbol=' + pos.symbol + '&type=' + pos.assetType);
+      if (res.ok) {
+        const q = await res.json();
+        pos.currentPrice = q.price;
+        pos.currency = q.currency || 'EUR';
+        pos.name = q.name || pos.name;
+        // Berechnung je nach Typ
+        if (pos.simType === 'single') {
+          pos.currentValue = pos.currentPrice * pos.shares;
+          pos.invested = pos.buyPrice * pos.shares;
+          pos.pl = pos.currentValue - pos.invested;
+          pos.plPct = (pos.pl / pos.invested) * 100;
+        } else {
+          // DCA: Anzahl Monate berechnen
+          const start = new Date(pos.startDate);
+          const now = new Date();
+          const months = Math.max(1, (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth()));
+          pos.invested = months * pos.monthlyAmount;
+          // Vereinfacht: Annahme gleichmässiger Kauf, aktueller Wert = Anteile * Kurs
+          // Anteile geschätzt: monatlicher Betrag / Durchschnittskurs (aktuell als Annäherung)
+          const avgPrice = pos.avgBuyPrice || pos.currentPrice;
+          const totalShares = pos.invested / avgPrice;
+          pos.currentValue = totalShares * pos.currentPrice;
+          pos.pl = pos.currentValue - pos.invested;
+          pos.plPct = (pos.pl / pos.invested) * 100;
+          pos.months = months;
+        }
+      }
+    } catch { /* Position ohne Kurs */ }
+  }));
+}
+
+function renderSimulator() {
+  const subtitle = document.getElementById('sim-subtitle');
+  const summary = document.getElementById('sim-summary');
+  const content = document.getElementById('sim-content');
+
+  if (!simPortfolio.length) {
+    subtitle.textContent = 'Fiktives Portfolio';
+    summary.innerHTML = '';
+    content.innerHTML = '<div class="empty-state"><div class="ico">🎮</div><h3>Portfolio ist leer</h3><p>Tippe auf + um eine Simulation hinzuzufügen.</p></div>';
+    return;
+  }
+
+  // Gesamtwerte
+  const totalValue = simPortfolio.reduce((s,p) => s + (p.currentValue||0), 0);
+  const totalInvested = simPortfolio.reduce((s,p) => s + (p.invested||0), 0);
+  const totalPl = totalValue - totalInvested;
+  const totalPlPct = totalInvested > 0 ? (totalPl / totalInvested) * 100 : 0;
+  const plClass = totalPl >= 0 ? 'pos' : 'neg';
+
+  subtitle.textContent = simPortfolio.length + ' Position' + (simPortfolio.length !== 1 ? 'en' : '');
+
+  summary.innerHTML =
+    '<div class="sim-summary-card">' +
+      '<div class="sim-total-label">Aktueller Gesamtwert</div>' +
+      '<div class="sim-total">' + fmtEur(totalValue) + '</div>' +
+      '<div class="sim-stats">' +
+        '<div class="sim-stat">' +
+          '<div class="sim-stat-val">' + fmtEur(totalInvested) + '</div>' +
+          '<div class="sim-stat-lbl">Investiert</div>' +
+        '</div>' +
+        '<div class="sim-stat">' +
+          '<div class="sim-stat-val ' + plClass + '">' + (totalPl >= 0 ? '+' : '') + fmtEur(totalPl) + '</div>' +
+          '<div class="sim-stat-lbl">Gewinn/Verlust</div>' +
+        '</div>' +
+        '<div class="sim-stat">' +
+          '<div class="sim-stat-val ' + plClass + '">' + (totalPlPct >= 0 ? '+' : '') + totalPlPct.toFixed(2) + '%</div>' +
+          '<div class="sim-stat-lbl">Rendite</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+
+  let posHtml = '<div class="group-header">Positionen</div><div class="list-group">';
+  simPortfolio.forEach(function(pos) {
+    const plClass = (pos.pl||0) >= 0 ? 'pos' : 'neg';
+    const plSign = (pos.pl||0) >= 0 ? '+' : '';
+    const typeLabel = pos.simType === 'dca' ? 'DCA · ' + (pos.months||1) + ' Monate' : 'Einzelkauf';
+    const detail = pos.simType === 'single'
+      ? '<span>Einstieg: <b>' + fmtEur(pos.buyPrice) + '</b></span><span>Stück: <b>' + pos.shares + '</b></span><span>Heute: <b>' + fmtEur(pos.currentPrice) + '</b></span>'
+      : '<span>Monatlich: <b>' + fmtEur(pos.monthlyAmount) + '</b></span><span>Seit: <b>' + new Date(pos.startDate).toLocaleDateString('de-DE',{month:'short',year:'numeric'}) + '</b></span>';
+
+    posHtml +=
+      '<div class="sim-position">' +
+        '<div class="sim-pos-row">' +
+          '<div>' +
+            '<div class="sim-pos-symbol">' + pos.symbol + '</div>' +
+            '<div class="sim-pos-name">' + escHtml(pos.name||pos.symbol) + '</div>' +
+            '<span class="sim-pos-type ' + pos.simType + '">' + typeLabel + '</span>' +
+          '</div>' +
+          '<div>' +
+            '<div class="sim-pos-value">' + fmtEur(pos.currentValue||0) + '</div>' +
+            '<div class="sim-pos-pl ' + plClass + '">' + plSign + fmtEur(pos.pl||0) + ' (' + plSign + (pos.plPct||0).toFixed(2) + '%)</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="sim-pos-detail">' + detail +
+          '<span style="margin-left:auto;"><button class="sim-del-btn" data-id="' + pos.id + '">Entfernen</button></span>' +
+        '</div>' +
+      '</div>';
+  });
+  posHtml += '</div>';
+  content.innerHTML = posHtml;
+
+  content.querySelectorAll('.sim-del-btn').forEach(function(btn) {
+    btn.addEventListener('click', async function(e) {
+      e.stopPropagation();
+      simPortfolio = simPortfolio.filter(function(p) { return p.id !== btn.dataset.id; });
+      await saveSimPortfolio();
+      renderSimulator();
+    });
+  });
+}
+
+function fmtEur(v) {
+  if (v === undefined || v === null) return '—';
+  return new Intl.NumberFormat('de-DE', {style:'currency', currency:'EUR', minimumFractionDigits:2, maximumFractionDigits:2}).format(v);
+}
+
+// Simulator Modal
+document.getElementById('sim-add-btn').addEventListener('click', function() {
+  clearSimSelection();
+  document.getElementById('sim-modal').classList.add('open');
+  setTimeout(function() { document.getElementById('sim-search').focus(); }, 100);
+  // Standarddatum setzen
+  var today = new Date().toISOString().split('T')[0];
+  var oneYearAgo = new Date(Date.now() - 365*24*3600*1000).toISOString().split('T')[0];
+  document.getElementById('sim-buy-date').value = today;
+  document.getElementById('sim-start-date').value = oneYearAgo;
+});
+
+document.getElementById('sim-cancel').addEventListener('click', function() {
+  document.getElementById('sim-modal').classList.remove('open');
+});
+
+document.getElementById('sim-type-select').addEventListener('change', function() {
+  const isDca = this.value === 'dca';
+  document.getElementById('sim-single-fields').style.display = isDca ? 'none' : '';
+  document.getElementById('sim-dca-fields').style.display = isDca ? '' : 'none';
+});
+
+document.getElementById('sim-search').addEventListener('input', function(e) {
+  clearTimeout(simSearchTimer);
+  simSearchTimer = setTimeout(function() { simSearchSymbol(e.target.value.trim()); }, 350);
+});
+
+async function simSearchSymbol(q) {
+  const container = document.getElementById('sim-search-results');
+  if (!q || q.length < 2) { container.classList.remove('open'); return; }
+  container.innerHTML = '<div class="search-spinner">Suche…</div>';
+  container.classList.add('open');
+  try {
+    const res = await fetch(API + '/search-symbol?q=' + encodeURIComponent(q));
+    const results = await res.json();
+    if (!results.length) { container.innerHTML = '<div class="search-spinner">Keine Ergebnisse</div>'; return; }
+    const typeLabel = {stock:'Aktie', etf:'ETF', crypto:'Krypto'};
+    container.innerHTML = results.map(function(r) {
+      return '<div class="search-result-item" data-symbol="'+r.symbol+'" data-type="'+r.type+'" data-name="'+escHtml(r.name)+'">' +
+        '<div class="sri-symbol">'+r.symbol+'</div>' +
+        '<div class="sri-info"><div class="sri-name">'+r.name+'</div><div class="sri-type">'+(typeLabel[r.type]||r.type)+' · '+r.exchange+'</div></div>' +
+      '</div>';
+    }).join('');
+    container.querySelectorAll('.search-result-item').forEach(function(el) {
+      el.addEventListener('click', function() {
+        simSelectedAsset = {symbol: el.dataset.symbol, type: el.dataset.type, name: el.dataset.name};
+        document.getElementById('sim-sel-symbol').textContent = el.dataset.symbol;
+        document.getElementById('sim-sel-name').textContent = el.dataset.name;
+        document.getElementById('sim-selected-block').style.display = '';
+        document.getElementById('sim-search-results').classList.remove('open');
+        document.getElementById('sim-search').value = '';
+        // Aktuellen Kurs als Kaufkurs vorausfüllen
+        fetch(API + '/fetch-quote?symbol=' + el.dataset.symbol + '&type=' + el.dataset.type)
+          .then(function(r) { return r.json(); })
+          .then(function(q) {
+            if (q.price) document.getElementById('sim-buy-price').value = q.price.toFixed(2);
+          }).catch(function(){});
+      });
+    });
+  } catch { container.innerHTML = '<div class="search-spinner">Fehler</div>'; }
+}
+
+function clearSimSelection() {
+  simSelectedAsset = null;
+  document.getElementById('sim-selected-block').style.display = 'none';
+  document.getElementById('sim-search').value = '';
+  document.getElementById('sim-search-results').innerHTML = '';
+  document.getElementById('sim-search-results').classList.remove('open');
+  document.getElementById('sim-buy-price').value = '';
+  document.getElementById('sim-shares').value = '';
+  document.getElementById('sim-monthly').value = '';
+  document.getElementById('sim-type-select').value = 'single';
+  document.getElementById('sim-single-fields').style.display = '';
+  document.getElementById('sim-dca-fields').style.display = 'none';
+}
+
+document.getElementById('sim-confirm').addEventListener('click', async function() {
+  if (!simSelectedAsset) { showToast('Bitte erst ein Asset suchen'); return; }
+  const simType = document.getElementById('sim-type-select').value;
+
+  let pos = {
+    id: Date.now().toString(),
+    symbol: simSelectedAsset.symbol,
+    name: simSelectedAsset.name,
+    assetType: simSelectedAsset.type,
+    currency: 'EUR',
+    simType: simType,
+  };
+
+  if (simType === 'single') {
+    const buyPrice = parseFloat(document.getElementById('sim-buy-price').value);
+    const shares = parseFloat(document.getElementById('sim-shares').value);
+    const buyDate = document.getElementById('sim-buy-date').value;
+    if (!buyPrice || !shares) { showToast('Kaufkurs und Stückzahl angeben'); return; }
+    pos.buyPrice = buyPrice;
+    pos.shares = shares;
+    pos.buyDate = buyDate;
+    pos.avgBuyPrice = buyPrice;
+  } else {
+    const monthly = parseFloat(document.getElementById('sim-monthly').value);
+    const startDate = document.getElementById('sim-start-date').value;
+    if (!monthly) { showToast('Monatlichen Betrag angeben'); return; }
+    pos.monthlyAmount = monthly;
+    pos.startDate = startDate;
+  }
+
+  document.getElementById('sim-modal').classList.remove('open');
+  simPortfolio.push(pos);
+  renderSimulator();
+
+  // Kurs nachladen
+  try {
+    const res = await fetch(API + '/fetch-quote?symbol=' + pos.symbol + '&type=' + pos.assetType);
+    const q = await res.json();
+    const idx = simPortfolio.findIndex(function(p) { return p.id === pos.id; });
+    if (idx >= 0 && q.price) {
+      simPortfolio[idx].currentPrice = q.price;
+      simPortfolio[idx].currency = q.currency || 'EUR';
+      simPortfolio[idx].name = q.name || pos.name;
+      simPortfolio[idx].avgBuyPrice = simPortfolio[idx].avgBuyPrice || q.price;
+      if (simType === 'single') {
+        simPortfolio[idx].currentValue = q.price * pos.shares;
+        simPortfolio[idx].invested = pos.buyPrice * pos.shares;
+      } else {
+        const start = new Date(pos.startDate);
+        const now = new Date();
+        const months = Math.max(1, (now.getFullYear()-start.getFullYear())*12+(now.getMonth()-start.getMonth()));
+        simPortfolio[idx].months = months;
+        simPortfolio[idx].invested = months * pos.monthlyAmount;
+        const totalShares = simPortfolio[idx].invested / (pos.avgBuyPrice || q.price);
+        simPortfolio[idx].currentValue = totalShares * q.price;
+      }
+      simPortfolio[idx].pl = simPortfolio[idx].currentValue - simPortfolio[idx].invested;
+      simPortfolio[idx].plPct = (simPortfolio[idx].pl / simPortfolio[idx].invested) * 100;
+      renderSimulator();
+      await saveSimPortfolio();
+    }
+  } catch { /* ignorieren */ }
+});
+
 // ── Init ──────────────────────────────────────────
 (async () => {
   try {
+    await loadSimPortfolio();
     watchlist = await loadWatchlist();
     const updates = watchlist.map(async a => {
       try { return { ...a, ...await fetchQuote(a.symbol, a.type) }; }

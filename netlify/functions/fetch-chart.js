@@ -27,8 +27,10 @@ export default async (req) => {
     for (const suffix of suffixes) {
       try {
         const candidate = symbol + suffix;
-        const res = await fetch(
-          `https://query1.finance.yahoo.com/v8/finance/chart/${candidate}?interval=1d&range=1mo`,
+        const range = url.searchParams.get("range") || "1mo";
+      const interval = range === "1d" ? "5m" : "1d";
+      const res = await fetch(
+          `https://query1.finance.yahoo.com/v8/finance/chart/${candidate}?interval=${interval}&range=${range}`,
           { headers: { "User-Agent": "Mozilla/5.0" } }
         );
         const data = await res.json();
