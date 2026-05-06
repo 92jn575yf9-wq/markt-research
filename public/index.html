@@ -1117,13 +1117,13 @@ async function loadDetailNews(a) {
 document.getElementById('analyze-all-btn').addEventListener('click', async function() {
   if (!watchlist.length) { showToast('Watchlist ist leer'); return; }
   const btn = document.getElementById('analyze-all-btn');
-  btn.textContent = '0 / ' + watchlist.length;
+  btn.textContent = '0/' + watchlist.length;
   btn.style.pointerEvents = 'none';
   btn.style.opacity = '0.7';
 
   for (let i = 0; i < watchlist.length; i++) {
     const a = watchlist[i];
-    btn.textContent = (i+1) + ' / ' + watchlist.length + ' — ' + a.symbol;
+    btn.textContent = (i+1) + '/' + watchlist.length;
     try {
       // News holen
       let news = [];
@@ -1159,7 +1159,7 @@ document.getElementById('analyze-all-btn').addEventListener('click', async funct
 
   await saveWatchlist(watchlist);
   renderWatchlist();
-  btn.textContent = 'Alle analysieren';
+  btn.textContent = '⚡';
   btn.style.pointerEvents = '';
   btn.style.opacity = '';
   showToast('✓ Alle ' + watchlist.length + ' Assets analysiert');
