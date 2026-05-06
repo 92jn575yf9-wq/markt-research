@@ -349,7 +349,7 @@
 <!-- SIMULATOR -->
 <div class="view" data-view="simulator">
   <div class="nav-bar">
-    <span></span>
+    <button class="nav-btn icon" id="sim-refresh-btn" title="Aktualisieren">↻</button>
     <button class="nav-btn icon" id="sim-add-btn">+</button>
   </div>
   <h1 class="large-title">Simulator</h1>
@@ -1281,6 +1281,20 @@ function fmtEur(v) {
 }
 
 // Simulator Modal
+document.getElementById('sim-refresh-btn').addEventListener('click', async function() {
+  const btn = document.getElementById('sim-refresh-btn');
+  const subtitle = document.getElementById('sim-subtitle');
+  btn.style.opacity = '0.5';
+  btn.style.pointerEvents = 'none';
+  subtitle.textContent = 'Kurse werden aktualisiert…';
+  await refreshSimPrices();
+  renderSimulator();
+  await saveSimPortfolio();
+  btn.style.opacity = '';
+  btn.style.pointerEvents = '';
+  subtitle.textContent = 'Aktualisiert ' + new Date().toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit'}) + ' Uhr';
+});
+
 document.getElementById('sim-add-btn').addEventListener('click', function() {
   clearSimSelection();
   // Watchlist-Chips befüllen
