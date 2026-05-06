@@ -1,7 +1,7 @@
 import { getStore } from "@netlify/blobs";
 
 const STORE_NAME = "markt-research";
-const CACHE_TTL = 6 * 60 * 60 * 1000; // 6 Stunden
+const CACHE_TTL = 6 * 60 * 60 * 1000;
 
 const headers = {
   "Content-Type": "application/json",
@@ -14,75 +14,91 @@ function dateStr(daysAgo = 0) {
   return d.toISOString().split("T")[0];
 }
 
-// Yahoo Finance Search API — zuverlässigste News-Quelle
-async function fetchYahooSearchNews(symbol) {
-  try {
-    const res = await fetch(
-      `https://query1.finance.yahoo.com/v1/finance/search?q=${symbol}&newsCount=10&quotesCount=0&enableFuzzyQuery=false`,
-      { headers: { "User-Agent": "Mozilla/5.0", "Accept": "application/json" } }
-    );
-    const data = await res.json();
-    const items = data?.news || [];
-    return items.map((item, i) => ({
-      id: `${symbol}-ys-${i}-${item.providerPublishTime}`,
-      headline: item.title,
-      summary: "",
-      source: item.publisher || "Yahoo Finance",
-      url: item.link,
-      datetime: (item.providerPublishTime || Date.now() / 1000) * 1000,
-      relatedSymbol: symbol,
-    }));
-  } catch { return []; }
-}
-
-// Finnhub Company News
+// Finnhub Company News (Aktien/ETFs)
 async function fetchFinnhubNews(symbol, finnhubKey) {
   try {
-    const url = `https://finnhub.io/api/v1/company-news?symbol=${symbol}&from=${dateStr(7)}&to=${dateStr(0)}&token=${finnhubKey}`;
+    const url = `https://finnhub.io/api/v1/company-news?symbol=${symbol}&from=${dateStr(14)}&to=${dateStr(0)}&token=${finnhubKey}`;
     const res = await fetch(url);
     const data = await res.json();
     if (!Array.isArray(data) || data.length === 0) return [];
     return data.slice(0, 8).map(item => ({
       id: `${symbol}-fh-${item.id}`,
       headline: item.headline,
-      summary: item.summary || "",
       source: item.source,
       url: item.url,
       datetime: item.datetime * 1000,
       relatedSymbol: symbol,
     }));
-  } catch { return []; }
+  } catch(e) {
+    console.error(`Finnhub News Fehler für ${symbol}:`, e.message);
+    return [];
+  }
 }
 
-// Finnhub Krypto-News (allgemeine Kategorie, gefiltert)
-async function fetchFinnhubCryptoNews(symbol, finnhubKey) {
+// Finnhub General News (gefiltert nach Symbol)
+async function fetchFinnhubGeneralNews(symbol, finnhubKey, category = "general") {
   try {
-    const res = await fetch(`https://finnhub.io/api/v1/news?category=crypto&token=${finnhubKey}`);
+    const res = await fetch(`https://finnhub.io/api/v1/news?category=${category}&token=${finnhubKey}`);
     const data = await res.json();
     if (!Array.isArray(data)) return [];
-    const keywords = {
-      BTC: ["bitcoin", "btc"],
-      ETH: ["ethereum", "eth"],
-      SOL: ["solana", "sol"],
-      XRP: ["ripple", "xrp"],
-    };
-    const kw = keywords[symbol] || [symbol.toLowerCase()];
+    const kw = symbol.toLowerCase();
+    const nameMap = { AAPL:"apple", MSFT:"microsoft", GOOGL:"google", AMZN:"amazon", TSLA:"tesla", NVDA:"nvidia", META:"meta", ASML:"asml", BTC:"bitcoin", ETH:"ethereum" };
+    const keywords = [kw, nameMap[symbol]].filter(Boolean);
     return data
-      .filter(item => kw.some(k =>
+      .filter(item => keywords.some(k =>
         item.headline?.toLowerCase().includes(k) ||
         item.summary?.toLowerCase().includes(k)
       ))
-      .slice(0, 6)
+      .slice(0, 5)
       .map(item => ({
-        id: `${symbol}-fh-${item.id}`,
+        id: `${symbol}-gen-${item.id}`,
         headline: item.headline,
-        summary: item.summary || "",
         source: item.source,
         url: item.url,
         datetime: item.datetime * 1000,
         relatedSymbol: symbol,
       }));
-  } catch { return []; }
+  } catch(e) {
+    console.error(`Finnhub General News Fehler:`, e.message);
+    return [];
+  }
+}
+
+// Yahoo Finance RSS (funktioniert server-seitig zuverlässig)
+async function fetchYahooRSS(symbol) {
+  try {
+    const res = await fetch(
+      `https://feeds.finance.yahoo.com/rss/2.0/headline?s=${symbol}&region=US&lang=en-US`,
+      { headers: { "User-Agent": "Mozilla/5.0 (compatible; Googlebot/2.1)" } }
+    );
+    const text = await res.text();
+    // RSS XML parsen
+    const items = [];
+    const itemMatches = text.matchAll(/<item>([\s\S]*?)<\/item>/g);
+    for (const match of itemMatches) {
+      const content = match[1];
+      const title = content.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/)?.[1] ||
+                    content.match(/<title>(.*?)<\/title>/)?.[1] || "";
+      const link = content.match(/<link>(.*?)<\/link>/)?.[1] || "";
+      const pubDate = content.match(/<pubDate>(.*?)<\/pubDate>/)?.[1] || "";
+      const source = content.match(/<source[^>]*>(.*?)<\/source>/)?.[1] || "Yahoo Finance";
+      if (title) {
+        items.push({
+          id: `${symbol}-rss-${items.length}`,
+          headline: title.trim(),
+          source: source.trim(),
+          url: link.trim(),
+          datetime: pubDate ? new Date(pubDate).getTime() : Date.now(),
+          relatedSymbol: symbol,
+        });
+      }
+      if (items.length >= 8) break;
+    }
+    return items;
+  } catch(e) {
+    console.error(`Yahoo RSS Fehler für ${symbol}:`, e.message);
+    return [];
+  }
 }
 
 export default async (req) => {
@@ -91,6 +107,7 @@ export default async (req) => {
     const symbolsParam = url.searchParams.get("symbols") || "";
     const typesParam = url.searchParams.get("types") || "";
     const forceRefresh = url.searchParams.get("refresh") === "1";
+    const debug = url.searchParams.get("debug") === "1";
 
     if (!symbolsParam) {
       return new Response(JSON.stringify([]), { status: 200, headers });
@@ -101,9 +118,8 @@ export default async (req) => {
     const FINNHUB_KEY = process.env.FINNHUB_KEY;
 
     const store = getStore(STORE_NAME);
-    const cacheKey = `news-v2-${symbols.join("-")}`;
+    const cacheKey = `news-v3-${symbols.join("-")}`;
 
-    // Cache prüfen (außer bei Force-Refresh)
     if (!forceRefresh) {
       try {
         const cached = await store.get(cacheKey, { type: "json" });
@@ -113,40 +129,54 @@ export default async (req) => {
       } catch { /* Cache miss */ }
     }
 
-    // News für alle Symbole parallel holen
     const allNews = [];
     const seen = new Set();
+    const debugLog = [];
 
     await Promise.all(symbols.map(async (symbol, i) => {
       const type = types[i] || "stock";
       let items = [];
 
       if (type === "crypto") {
-        // Krypto: Finnhub zuerst, dann Yahoo Search
-        if (FINNHUB_KEY) items = await fetchFinnhubCryptoNews(symbol, FINNHUB_KEY);
-        if (items.length === 0) items = await fetchYahooSearchNews(symbol + "-USD");
-        if (items.length === 0) items = await fetchYahooSearchNews(symbol);
+        if (FINNHUB_KEY) {
+          items = await fetchFinnhubGeneralNews(symbol, FINNHUB_KEY, "crypto");
+          debugLog.push(`${symbol} crypto finnhub: ${items.length}`);
+        }
+        if (items.length === 0) {
+          items = await fetchYahooRSS(symbol + "-USD");
+          debugLog.push(`${symbol} yahoo rss: ${items.length}`);
+        }
       } else {
-        // Aktien & ETFs: Finnhub zuerst, dann Yahoo Search als Fallback
-        if (FINNHUB_KEY) items = await fetchFinnhubNews(symbol, FINNHUB_KEY);
-        if (items.length === 0) items = await fetchYahooSearchNews(symbol);
+        // Schritt 1: Finnhub Company News
+        if (FINNHUB_KEY) {
+          items = await fetchFinnhubNews(symbol, FINNHUB_KEY);
+          debugLog.push(`${symbol} finnhub company: ${items.length}`);
+        }
+        // Schritt 2: Yahoo RSS Fallback
+        if (items.length === 0) {
+          items = await fetchYahooRSS(symbol);
+          debugLog.push(`${symbol} yahoo rss: ${items.length}`);
+        }
+        // Schritt 3: Finnhub General News als letzter Ausweg
+        if (items.length === 0 && FINNHUB_KEY) {
+          items = await fetchFinnhubGeneralNews(symbol, FINNHUB_KEY, "general");
+          debugLog.push(`${symbol} finnhub general: ${items.length}`);
+        }
       }
 
-      // Duplikate vermeiden
       for (const item of items) {
         if (!item.headline) continue;
         const key = item.headline.toLowerCase().slice(0, 80);
-        if (!seen.has(key)) {
-          seen.add(key);
-          allNews.push(item);
-        }
+        if (!seen.has(key)) { seen.add(key); allNews.push(item); }
       }
     }));
 
-    // Nach Datum sortieren, neueste zuerst
     allNews.sort((a, b) => b.datetime - a.datetime);
 
-    // Cachen
+    if (debug) {
+      return new Response(JSON.stringify({ debug: debugLog, count: allNews.length, items: allNews }), { status: 200, headers });
+    }
+
     try {
       await store.set(cacheKey, JSON.stringify({ ts: Date.now(), items: allNews }));
     } catch { /* ignorieren */ }
