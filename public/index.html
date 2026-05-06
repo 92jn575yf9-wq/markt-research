@@ -329,6 +329,32 @@
   .analyze-bar-wrap { height: 4px; background: var(--bg-card-2); border-radius: 2px; margin-top: 10px; overflow: hidden; }
   .analyze-bar { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.4s ease; }
 
+
+  /* Kompakt-Grid Watchlist */
+  .wl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0 16px; }
+  .wl-grid-card { background: var(--bg-card); border-radius: 12px; padding: 12px 13px; cursor: pointer; box-shadow: var(--shadow-sm); }
+  .wl-grid-card:active { opacity: 0.7; }
+  .wl-grid-symbol { font-size: 15px; font-weight: 700; letter-spacing: -0.3px; }
+  .wl-grid-name { font-size: 11px; color: var(--text-secondary); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .wl-grid-price { font-size: 14px; font-weight: 600; margin-top: 8px; font-variant-numeric: tabular-nums; }
+  .wl-grid-change { font-size: 12px; font-weight: 500; margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .wl-grid-verdict { width: 8px; height: 8px; border-radius: 50%; float: right; margin-top: 2px; }
+
+  /* Farbiges P&L im Simulator */
+  .pl-pos { color: var(--green) !important; }
+  .pl-neg { color: var(--red) !important; }
+
+
+  .sim-position { padding: 0; position: relative; cursor: pointer; }
+  .sim-pos-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 16px; }
+  .sim-pos-header:active { background: var(--bg-card-2); }
+  .sim-pos-chevron { color: var(--text-tertiary); font-size: 13px; transition: transform 0.2s; flex-shrink: 0; }
+  .sim-position.open .sim-pos-chevron { transform: rotate(90deg); }
+  .sim-pos-details { display: none; padding: 0 16px 14px; border-top: 0.5px solid var(--separator); }
+  .sim-position.open .sim-pos-details { display: block; }
+  .sim-pos-detail-grid { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; color: var(--text-secondary); padding-top: 10px; }
+  .sim-pos-detail-grid span b { color: var(--text); font-weight: 600; }
+
 </style>
 </head>
 <body>
@@ -1087,6 +1113,58 @@ async function loadDetailNews(a) {
 }
 
 // ── Asset hinzufügen ──────────────────────────────
+// ── Alle analysieren ─────────────────────────────────
+document.getElementById('analyze-all-btn').addEventListener('click', async function() {
+  if (!watchlist.length) { showToast('Watchlist ist leer'); return; }
+  const btn = document.getElementById('analyze-all-btn');
+  btn.textContent = '0 / ' + watchlist.length;
+  btn.style.pointerEvents = 'none';
+  btn.style.opacity = '0.7';
+
+  for (let i = 0; i < watchlist.length; i++) {
+    const a = watchlist[i];
+    btn.textContent = (i+1) + ' / ' + watchlist.length + ' — ' + a.symbol;
+    try {
+      // News holen
+      let news = [];
+      try {
+        const nr = await fetch(API + '/fetch-news?symbols=' + a.symbol + '&types=' + a.type);
+        if (nr.ok) news = await nr.json();
+      } catch {}
+      // Analyse starten
+      const res = await fetch(API + '/analyze', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          symbol: a.symbol, type: a.type, name: a.name,
+          price: a.price, changePercent: a.changePercent,
+          news: news.filter(function(n) { return !n.relatedSymbol || n.relatedSymbol === a.symbol; }),
+          forceRefresh: true,
+        }),
+      });
+      if (res.ok) {
+        const analysis = await res.json();
+        const idx = watchlist.findIndex(function(x) { return x.symbol === a.symbol; });
+        if (idx >= 0) {
+          watchlist[idx].verdict = analysis.verdict;
+          watchlist[idx].dcaScore = analysis.dcaScore;
+          watchlist[idx].analysisAge = 'Gerade eben';
+          watchlist[idx].analysis = analysis;
+        }
+      }
+    } catch(e) { console.error('Analyse Fehler ' + a.symbol, e); }
+    // Kurze Pause zwischen den Calls
+    await new Promise(function(r) { setTimeout(r, 800); });
+  }
+
+  await saveWatchlist(watchlist);
+  renderWatchlist();
+  btn.textContent = 'Alle analysieren';
+  btn.style.pointerEvents = '';
+  btn.style.opacity = '';
+  showToast('✓ Alle ' + watchlist.length + ' Assets analysiert');
+});
+
 // ── Symbol-Suche ──────────────────────────────────
 let searchTimer = null;
 let selectedAsset = null;
@@ -1309,6 +1387,11 @@ function renderSimulator() {
   posHtml += '</div>';
   content.innerHTML = posHtml;
 
+  content.querySelectorAll('[data-pos-id]').forEach(function(el) {
+    el.querySelector('.sim-pos-header').addEventListener('click', function() {
+      el.classList.toggle('open');
+    });
+  });
   content.querySelectorAll('.sim-del-btn').forEach(function(btn) {
     btn.addEventListener('click', async function(e) {
       e.stopPropagation();
