@@ -295,6 +295,12 @@
   .sim-pos-detail span b { color: var(--text); font-weight: 600; }
   .sim-del-btn { background: var(--red-soft); color: var(--red); border: none; border-radius: 8px; padding: 5px 10px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; }
 
+
+  .wl-chip { display: inline-flex; align-items: center; gap: 5px; background: var(--bg-card-2); border: 1px solid var(--separator); border-radius: 20px; padding: 6px 12px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.12s; }
+  .wl-chip:active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+  .wl-chip-symbol { font-weight: 700; }
+  .wl-chip-type { font-size: 10px; font-weight: 600; color: var(--text-tertiary); }
+
 </style>
 </head>
 <body>
@@ -356,8 +362,12 @@
 <div class="modal-overlay" id="sim-modal">
   <div class="modal-sheet">
     <div class="modal-title">Position simulieren</div>
+    <div class="modal-field" id="sim-watchlist-quick" style="display:none;">
+      <div class="modal-label">Aus Watchlist</div>
+      <div id="sim-wl-chips" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;"></div>
+    </div>
     <div class="modal-field">
-      <div class="modal-label">Asset suchen</div>
+      <div class="modal-label">Oder suchen</div>
       <input class="modal-input" id="sim-search" type="text" placeholder="z.B. Apple, Bitcoin, MSCI World…" autocomplete="off" autocorrect="off" spellcheck="false">
       <div class="search-results" id="sim-search-results"></div>
     </div>
@@ -1273,6 +1283,38 @@ function fmtEur(v) {
 // Simulator Modal
 document.getElementById('sim-add-btn').addEventListener('click', function() {
   clearSimSelection();
+  // Watchlist-Chips befüllen
+  const quickBlock = document.getElementById('sim-watchlist-quick');
+  const chips = document.getElementById('sim-wl-chips');
+  if (watchlist.length > 0) {
+    quickBlock.style.display = '';
+    chips.innerHTML = watchlist.map(function(a) {
+      return '<div class="wl-chip" data-symbol="'+a.symbol+'" data-type="'+a.type+'" data-name="'+escHtml(a.name||a.symbol)+'">' +
+        '<span class="wl-chip-symbol">'+a.symbol+'</span>' +
+        '<span class="wl-chip-type">'+({stock:'Aktie',etf:'ETF',crypto:'Krypto'}[a.type]||a.type)+'</span>' +
+      '</div>';
+    }).join('');
+    chips.querySelectorAll('.wl-chip').forEach(function(chip) {
+      chip.addEventListener('click', function() {
+        simSelectedAsset = {symbol: chip.dataset.symbol, type: chip.dataset.type, name: chip.dataset.name};
+        document.getElementById('sim-sel-symbol').textContent = chip.dataset.symbol;
+        document.getElementById('sim-sel-name').textContent = chip.dataset.name;
+        document.getElementById('sim-selected-block').style.display = '';
+        // Aktuellen Kurs vorausfüllen
+        const wlAsset = watchlist.find(function(a) { return a.symbol === chip.dataset.symbol; });
+        if (wlAsset && wlAsset.price) {
+          document.getElementById('sim-buy-price').value = wlAsset.price.toFixed(2);
+        }
+        // Chips visuell markieren
+        chips.querySelectorAll('.wl-chip').forEach(function(c2) { c2.style.background=''; c2.style.borderColor=''; c2.style.color=''; });
+        chip.style.background = 'var(--accent-soft)';
+        chip.style.borderColor = 'var(--accent)';
+        chip.style.color = 'var(--accent)';
+      });
+    });
+  } else {
+    quickBlock.style.display = 'none';
+  }
   document.getElementById('sim-modal').classList.add('open');
   setTimeout(function() { document.getElementById('sim-search').focus(); }, 100);
   // Standarddatum setzen
