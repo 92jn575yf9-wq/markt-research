@@ -22,28 +22,60 @@ export default async (req) => {
       });
     }
 
-    let quoteSymbol = symbol;
+    // Krypto: Finnhub erwartet z.B. "BINANCE:BTCEUR"
     if (type === "crypto") {
-      quoteSymbol = `BINANCE:${symbol}EUR`;
+      const quoteRes = await fetch(`https://finnhub.io/api/v1/quote?symbol=BINANCE:${symbol}EUR&token=${FINNHUB_KEY}`);
+      const quote = await quoteRes.json();
+      if (!quote.c || quote.c === 0) {
+        return new Response(JSON.stringify({ error: `Kein Kurs für ${symbol} gefunden` }), {
+          status: 404, headers,
+        });
+      }
+      return new Response(JSON.stringify({
+        symbol, type,
+        name: symbol,
+        currency: "EUR",
+        price: quote.c,
+        change: quote.d,
+        changePercent: quote.dp,
+        high: quote.h,
+        low: quote.l,
+        open: quote.o,
+        prevClose: quote.pc,
+        timestamp: Date.now(),
+      }), { status: 200, headers });
     }
 
-    const [quoteRes, profileRes] = await Promise.all([
-      fetch(`https://finnhub.io/api/v1/quote?symbol=${quoteSymbol}&token=${FINNHUB_KEY}`),
-      type !== "crypto"
-        ? fetch(`https://finnhub.io/api/v1/stock/profile2?symbol=${symbol}&token=${FINNHUB_KEY}`)
-        : Promise.resolve(null),
-    ]);
+    // ETFs: europäische Exchange-Suffixe automatisch durchprobieren
+    // Aktien: direkt versuchen, dann mit Suffixen als Fallback
+    const suffixes = type === "etf"
+      ? ["", ".L", ".AS", ".DE", ".PA", ".MI", ".SW"]
+      : ["", ".L", ".AS", ".DE"];
 
-    const quote = await quoteRes.json();
-    const profile = profileRes ? await profileRes.json() : {};
+    let quote = null;
+    let resolvedSymbol = symbol;
 
-    if (!quote.c || quote.c === 0) {
+    for (const suffix of suffixes) {
+      const candidate = symbol + suffix;
+      const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${candidate}&token=${FINNHUB_KEY}`);
+      const data = await res.json();
+      if (data.c && data.c !== 0) {
+        quote = data;
+        resolvedSymbol = candidate;
+        break;
+      }
+    }
+
+    if (!quote) {
       return new Response(JSON.stringify({ error: `Kein Kurs für ${symbol} gefunden` }), {
         status: 404, headers,
       });
     }
 
-    const result = {
+    const profileRes = await fetch(`https://finnhub.io/api/v1/stock/profile2?symbol=${resolvedSymbol}&token=${FINNHUB_KEY}`);
+    const profile = await profileRes.json();
+
+    return new Response(JSON.stringify({
       symbol,
       type,
       name: profile.name || symbol,
@@ -58,9 +90,7 @@ export default async (req) => {
       open: quote.o,
       prevClose: quote.pc,
       timestamp: Date.now(),
-    };
-
-    return new Response(JSON.stringify(result), { status: 200, headers });
+    }), { status: 200, headers });
 
   } catch (err) {
     console.error("fetch-quote Fehler:", err);
