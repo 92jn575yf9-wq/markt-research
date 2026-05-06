@@ -499,84 +499,109 @@ function renderCard(a) {
   </div>`;
 }
 
+
 // ── News rendern ──────────────────────────────────
 async function fetchGeneralNews(forceRefresh = false) {
-  // Holt allgemeine Markt-News (nicht symbol-spezifisch)
   const refresh = forceRefresh ? '&refresh=1' : '';
-  const res = await fetch(`${API}/fetch-news?symbols=MARKET&types=general${refresh}`);
+  const res = await fetch(API + '/fetch-news?symbols=MARKET&types=general' + refresh);
   return res.ok ? res.json() : [];
 }
 
 async function loadNews(forceRefresh = false) {
   const container = document.getElementById('news-content');
   const subtitle = document.getElementById('news-subtitle');
-
-  if (newsCache && !forceRefresh) { renderNews(newsCache); return; }
-
-  container.innerHTML = `<div class="news-loading"><div class="spinner"></div><br>News werden geladen…</div>`;
-  subtitle.textContent = 'Wird aktualisiert…';
-
+  if (newsCache && !forceRefresh) { renderNewsClusters(newsCache); return; }
+  container.innerHTML = '<div class="news-loading"><div class="spinner"></div><br>News werden geladen\u2026</div>';
+  subtitle.textContent = 'Wird aktualisiert\u2026';
   try {
-    // Nur Symbole die NICHT in der Watchlist sind — generische Markt-News
-    // Wir holen allgemeine Finnhub News ohne Symbol-Filter
     const news = await fetchGeneralNews(forceRefresh);
     newsCache = news;
-    renderNews(news);
-    subtitle.textContent = `${news.length} Artikel · ${new Date().toLocaleTimeString('de-DE', {hour:'2-digit',minute:'2-digit'})} Uhr`;
+    renderNewsClusters(news);
+    subtitle.textContent = new Date().toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit'}) + ' Uhr';
   } catch(err) {
-    container.innerHTML = `<div class="empty-state"><div class="ico">⚠️</div><h3>Fehler beim Laden</h3><p>${err.message}</p></div>`;
+    container.innerHTML = '<div class="empty-state"><div class="ico">\u26a0\ufe0f</div><h3>Fehler</h3><p>' + err.message + '</p></div>';
   }
 }
 
-function renderNews(news) {
+async function renderNewsClusters(news) {
   const container = document.getElementById('news-content');
-  if (!news.length) {
-    container.innerHTML = `<div class="empty-state"><div class="ico">📭</div><h3>Keine News gefunden</h3><p>Für deine Assets wurden keine aktuellen Nachrichten gefunden.</p></div>`;
+  if (!news || !news.length) {
+    container.innerHTML = '<div class="empty-state"><div class="ico">\ud83d\udcad</div><h3>Keine News</h3><p>Momentan keine Markt-News.</p></div>';
     return;
   }
+  container.innerHTML = '<div class="news-loading"><div class="spinner"></div><br>Claude clustert die News\u2026</div>';
+  try {
+    const res = await fetch(API + '/cluster-news', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ news: news, forceRefresh: false })
+    });
+    if (!res.ok) throw new Error('Cluster-Fehler');
+    const clusters = await res.json();
+    if (!Array.isArray(clusters) || !clusters.length) throw new Error('Keine Cluster');
+    let html = '';
+    clusters.forEach(function(c) {
+      const items = (c.items || []).slice(0, 5).map(function(item) {
+        var hl = (item.headline || '').replace(/ - Reuters$| - CNBC$| - Bloomberg$| - AP$/,'').trim();
+        return '<div class="cluster-item" data-url="' + (item.url||'') + '">' +
+          '<div class="cluster-item-text">' + escHtml(hl) + '</div>' +
+          '<div class="cluster-item-source">' + escHtml(item.source||'') + '</div>' +
+          '<div class="cluster-item-arrow">\u203a</div>' +
+        '</div>';
+      }).join('');
+      html +=
+        '<div class="cluster-card">' +
+          '<div class="cluster-header">' +
+            '<div class="cluster-title-row">' +
+              '<span class="cluster-emoji">' + c.emoji + '</span>' +
+              '<span class="cluster-title">' + escHtml(c.titel||'') + '</span>' +
+              '<span class="cluster-count">' + (c.items||[]).length + ' Artikel</span>' +
+            '</div>' +
+            '<div class="cluster-summary">' + escHtml(c.zusammenfassung||'') + '</div>' +
+          '</div>' +
+          '<div class="cluster-items">' + items + '</div>' +
+        '</div>';
+    });
+    container.innerHTML = html;
+    container.querySelectorAll('[data-url]').forEach(function(el) {
+      el.addEventListener('click', function() { if (el.dataset.url) window.open(el.dataset.url, '_blank'); });
+    });
+  } catch(err) {
+    // Fallback: einfache Liste
+    renderNewsList(news);
+  }
+}
 
-  // Watchlist-Symbole herausfiltern
-  const wlSymbols = new Set(watchlist.map(a => a.symbol));
-  const filtered = news.filter(item => !item.relatedSymbol || !wlSymbols.has(item.relatedSymbol));
-
+function renderNewsList(news) {
+  const container = document.getElementById('news-content');
+  const wlSymbols = new Set(watchlist.map(function(a) { return a.symbol; }));
+  const filtered = news.filter(function(item) { return !item.relatedSymbol || !wlSymbols.has(item.relatedSymbol); });
   if (!filtered.length) {
-    container.innerHTML = `<div class="empty-state"><div class="ico">📭</div><h3>Keine externen News</h3><p>Alle aktuellen News beziehen sich auf deine Watchlist-Assets.</p></div>`;
+    container.innerHTML = '<div class="empty-state"><div class="ico">\ud83d\udcad</div><h3>Keine News</h3></div>';
     return;
   }
-
-  // Nach Datum gruppieren
   const groups = {};
-  filtered.forEach(item => {
+  filtered.forEach(function(item) {
     const label = fmtNewsDate(item.datetime);
     if (!groups[label]) groups[label] = [];
     groups[label].push(item);
   });
-
   let out = '';
-  for (const [label, items] of Object.entries(groups)) {
-    out += `<div class="group-header">${label}</div><div class="list-group">`;
-    items.forEach(item => {
-      const timeStr = new Date(item.datetime).toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit'});
-      out += `
-      <div class="news-item" data-url="${item.url||''}">
-        <div class="news-headline">${escHtml(item.headline)}</div>
-        <div class="news-meta">
-          <span class="news-source">${escHtml(item.source)}</span>
-          <span>·</span>
-          <span>${timeStr} Uhr</span>
-        </div>
-      </div>`;
+  for (const label in groups) {
+    out += '<div class="group-header">' + label + '</div><div class="list-group">';
+    groups[label].forEach(function(item) {
+      var hl = (item.headline||'').replace(/ - Reuters$| - CNBC$| - Bloomberg$/,'').trim();
+      var t = new Date(item.datetime).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+      out += '<div class="news-item" data-url="'+(item.url||'')+'">' +
+        '<div class="news-headline">'+escHtml(hl)+'</div>' +
+        '<div class="news-meta"><span class="news-source">'+escHtml(item.source||'')+'</span><span> \u00b7 </span><span>'+t+' Uhr</span></div>' +
+      '</div>';
     });
     out += '</div>';
   }
   container.innerHTML = out;
-
-  // News-Links öffnen
-  container.querySelectorAll('[data-url]').forEach(el => {
-    el.addEventListener('click', () => {
-      const url = el.dataset.url;
-      if (url) window.open(url, '_blank');
-    });
+  container.querySelectorAll('[data-url]').forEach(function(el) {
+    el.addEventListener('click', function() { if (el.dataset.url) window.open(el.dataset.url,'_blank'); });
   });
 }
 
