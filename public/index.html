@@ -9,69 +9,33 @@
 <title>Markt-Research</title>
 <style>
   :root {
-    --bg: #000000;
-    --bg-card: #1c1c1e;
-    --bg-card-2: #2c2c2e;
-    --bg-button-2: #2c2c2e;
-    --separator: rgba(84, 84, 88, 0.6);
-    --shadow-sm: none;
-    --text: #ffffff;
-    --text-secondary: rgba(235, 235, 245, 0.6);
-    --text-tertiary: rgba(235, 235, 245, 0.3);
-    --tab-inactive: rgba(235, 235, 245, 0.5);
-    --accent: #b8e600;
-    --accent-soft: rgba(184, 230, 0, 0.18);
-    --green: #30d158;
-    --green-soft: rgba(48, 209, 88, 0.2);
-    --red: #ff453a;
-    --red-soft: rgba(255, 69, 58, 0.18);
-    --orange: #ff9f0a;
-    --orange-soft: rgba(255, 159, 10, 0.18);
-    --blue: #0a84ff;
-    --blue-soft: rgba(10, 132, 255, 0.18);
-    --tab-bg: rgba(22, 22, 23, 0.82);
+    --bg: #000000; --bg-card: #1c1c1e; --bg-card-2: #2c2c2e; --bg-button-2: #2c2c2e;
+    --separator: rgba(84,84,88,0.6); --shadow-sm: none;
+    --text: #ffffff; --text-secondary: rgba(235,235,245,0.6); --text-tertiary: rgba(235,235,245,0.3);
+    --tab-inactive: rgba(235,235,245,0.5);
+    --accent: #b8e600; --accent-soft: rgba(184,230,0,0.18);
+    --green: #30d158; --green-soft: rgba(48,209,88,0.2);
+    --red: #ff453a; --red-soft: rgba(255,69,58,0.18);
+    --orange: #ff9f0a; --orange-soft: rgba(255,159,10,0.18);
+    --blue: #0a84ff; --blue-soft: rgba(10,132,255,0.18);
+    --tab-bg: rgba(22,22,23,0.82);
   }
   html.light {
-    --bg: #f2f2f7;
-    --bg-card: #ffffff;
-    --bg-card-2: #efeff4;
-    --bg-button-2: #e5e5ea;
-    --separator: rgba(60, 60, 67, 0.29);
-    --shadow-sm: 0 1px 2px rgba(0,0,0,0.06);
-    --text: #000000;
-    --text-secondary: rgba(60, 60, 67, 0.6);
-    --text-tertiary: rgba(60, 60, 67, 0.3);
-    --tab-inactive: rgba(60, 60, 67, 0.55);
-    --accent: #4a7400;
-    --accent-soft: rgba(74, 116, 0, 0.14);
-    --green: #248a3d;
-    --green-soft: rgba(36, 138, 61, 0.13);
-    --red: #d70015;
-    --red-soft: rgba(215, 0, 21, 0.1);
-    --orange: #c93400;
-    --orange-soft: rgba(201, 52, 0, 0.1);
-    --blue: #0040dd;
-    --blue-soft: rgba(0, 64, 221, 0.1);
-    --tab-bg: rgba(248, 248, 250, 0.82);
+    --bg: #f2f2f7; --bg-card: #ffffff; --bg-card-2: #efeff4; --bg-button-2: #e5e5ea;
+    --separator: rgba(60,60,67,0.29); --shadow-sm: 0 1px 2px rgba(0,0,0,0.06);
+    --text: #000000; --text-secondary: rgba(60,60,67,0.6); --text-tertiary: rgba(60,60,67,0.3);
+    --tab-inactive: rgba(60,60,67,0.55);
+    --accent: #4a7400; --accent-soft: rgba(74,116,0,0.14);
+    --green: #248a3d; --green-soft: rgba(36,138,61,0.13);
+    --red: #d70015; --red-soft: rgba(215,0,21,0.1);
+    --orange: #c93400; --orange-soft: rgba(201,52,0,0.1);
+    --blue: #0040dd; --blue-soft: rgba(0,64,221,0.1);
+    --tab-bg: rgba(248,248,250,0.82);
   }
-
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-  html.dark { color-scheme: dark; }
-  html.light { color-scheme: light; }
-
-  html, body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
-    -webkit-font-smoothing: antialiased;
-    min-height: 100vh;
-  }
-  body {
-    padding-top: env(safe-area-inset-top);
-    padding-bottom: calc(60px + env(safe-area-inset-bottom));
-    max-width: 760px;
-    margin: 0 auto;
-  }
+  html.dark { color-scheme: dark; } html.light { color-scheme: light; }
+  html, body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif; -webkit-font-smoothing: antialiased; min-height: 100vh; }
+  body { padding-top: env(safe-area-inset-top); padding-bottom: calc(60px + env(safe-area-inset-bottom)); max-width: 760px; margin: 0 auto; }
 
   .view { display: none; padding-bottom: 24px; }
   .view.active { display: block; }
@@ -89,8 +53,8 @@
   .list-item { padding: 14px 16px; cursor: pointer; position: relative; transition: background 0.12s; }
   .list-item:active { background: var(--bg-card-2); }
   .list-item + .list-item::before,
-  .source-link + .source-link::before,
-  .news-item + .news-item::before { content: ''; position: absolute; top: 0; left: 16px; right: 0; height: 0.5px; background: var(--separator); }
+  .news-item + .news-item::before,
+  .source-link + .source-link::before { content: ''; position: absolute; top: 0; left: 16px; right: 0; height: 0.5px; background: var(--separator); }
 
   .asset-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
   .asset-info { min-width: 0; flex: 1; }
@@ -98,9 +62,7 @@
   .asset-name { font-size: 13px; color: var(--text-secondary); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .asset-price { font-size: 17px; font-weight: 500; text-align: right; font-variant-numeric: tabular-nums; }
   .asset-change { font-size: 13px; margin-top: 2px; text-align: right; font-variant-numeric: tabular-nums; font-weight: 500; }
-  .asset-change.pos { color: var(--green); }
-  .asset-change.neg { color: var(--red); }
-  .asset-change.neu { color: var(--text-secondary); }
+  .asset-change.pos { color: var(--green); } .asset-change.neg { color: var(--red); } .asset-change.neu { color: var(--text-secondary); }
 
   .verdict-row { display: flex; align-items: center; gap: 10px; margin-top: 12px; padding-top: 12px; border-top: 0.5px solid var(--separator); }
   .verdict-pill { font-size: 11px; font-weight: 700; letter-spacing: 0.4px; padding: 4px 9px; border-radius: 6px; text-transform: uppercase; }
@@ -123,6 +85,7 @@
   .empty-state h3 { font-size: 17px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
   .empty-state p { font-size: 15px; line-height: 1.4; }
 
+  /* Modal */
   .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; align-items: flex-end; justify-content: center; }
   .modal-overlay.open { display: flex; }
   .modal-sheet { background: var(--bg-card); border-radius: 14px 14px 0 0; width: 100%; max-width: 760px; padding: 20px 16px calc(24px + env(safe-area-inset-bottom)); }
@@ -140,41 +103,56 @@
   .btn-secondary { background: var(--bg-button-2); color: var(--text); }
   .btn:active { opacity: 0.7; }
 
+  /* Tab Bar */
   .tab-bar { position: fixed; bottom: 0; left: 0; right: 0; background: var(--tab-bg); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); border-top: 0.5px solid var(--separator); padding-bottom: env(safe-area-inset-bottom); z-index: 100; }
   .tab-bar-inner { display: flex; max-width: 760px; margin: 0 auto; }
-  .tab { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 0 4px; background: none; border: none; color: var(--tab-inactive); cursor: pointer; transition: color 0.15s; min-height: 49px; font-family: inherit; }
+  .tab { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 0 4px; background: none; border: none; color: var(--tab-inactive); cursor: pointer; transition: color 0.15s; min-height: 49px; font-family: inherit; position: relative; }
   .tab.active { color: var(--accent); }
   .tab svg { width: 24px; height: 24px; fill: currentColor; }
   .tab-label { font-size: 10px; font-weight: 500; letter-spacing: 0.06px; }
+  .tab-badge { position: absolute; top: 6px; right: calc(50% - 18px); background: var(--red); color: #fff; font-size: 9px; font-weight: 700; width: 16px; height: 16px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
 
+  /* News */
   .news-item { padding: 14px 16px; cursor: pointer; position: relative; }
   .news-item:active { background: var(--bg-card-2); }
   .news-headline { font-size: 15px; font-weight: 600; line-height: 1.32; letter-spacing: -0.24px; }
   .news-meta { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 12px; color: var(--text-secondary); }
   .news-source { font-weight: 500; }
+  .news-relates { display: flex; align-items: center; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+  .related-tag { display: inline-flex; align-items: center; gap: 5px; background: var(--bg-button-2); padding: 4px 9px; border-radius: 100px; font-size: 12px; font-weight: 600; }
+  .verdict-mini { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .verdict-mini.akku { background: var(--accent); }
+  .verdict-mini.halten { background: var(--orange); }
+  .verdict-mini.beobachten { background: var(--blue); }
+  .verdict-mini.risiko { background: var(--red); }
+  .verdict-mini.neu { background: var(--text-tertiary); }
+  .news-link-arrow { margin-left: auto; color: var(--text-tertiary); font-size: 15px; flex-shrink: 0; }
 
+  /* News loading */
+  .news-loading { text-align: center; padding: 32px 16px; color: var(--text-secondary); font-size: 14px; }
+  .spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid var(--separator); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 8px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Detail */
   .detail-hero { padding: 4px 16px 16px; }
   .detail-badges { display: flex; gap: 6px; margin-bottom: 8px; }
   .badge { font-size: 10px; font-weight: 700; padding: 4px 8px; border-radius: 6px; letter-spacing: 0.4px; text-transform: uppercase; }
   .badge.aktie { background: var(--accent-soft); color: var(--accent); }
   .badge.etf { background: var(--blue-soft); color: var(--blue); }
   .badge.krypto { background: var(--orange-soft); color: var(--orange); }
-  .badge.isin { background: var(--bg-card-2); color: var(--text-secondary); font-family: ui-monospace, "SF Mono", Menlo, monospace; font-weight: 500; border: 0.5px solid var(--separator); text-transform: none; }
+  .badge.isin { background: var(--bg-card-2); color: var(--text-secondary); font-family: ui-monospace,"SF Mono",Menlo,monospace; font-weight: 500; border: 0.5px solid var(--separator); text-transform: none; }
   .detail-name { font-size: 17px; color: var(--text-secondary); margin-bottom: 10px; }
   .detail-price-line { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
   .detail-price { font-size: 36px; font-weight: 700; letter-spacing: -1px; font-variant-numeric: tabular-nums; }
   .detail-change { font-size: 17px; font-weight: 500; font-variant-numeric: tabular-nums; }
-  .detail-change.pos { color: var(--green); }
-  .detail-change.neg { color: var(--red); }
+  .detail-change.pos { color: var(--green); } .detail-change.neg { color: var(--red); }
 
   .verdict-hero { background: var(--bg-card); border-radius: 14px; margin: 0 16px 8px; padding: 16px; box-shadow: var(--shadow-sm); }
   .verdict-hero-label { font-size: 12px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 6px; }
   .verdict-hero-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
   .verdict-hero-value { font-size: 22px; font-weight: 700; }
-  .verdict-hero-value.akku { color: var(--accent); }
-  .verdict-hero-value.halten { color: var(--orange); }
-  .verdict-hero-value.beobachten { color: var(--blue); }
-  .verdict-hero-value.risiko { color: var(--red); }
+  .verdict-hero-value.akku { color: var(--accent); } .verdict-hero-value.halten { color: var(--orange); }
+  .verdict-hero-value.beobachten { color: var(--blue); } .verdict-hero-value.risiko { color: var(--red); }
   .verdict-hero-meta { margin-top: 12px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--text-secondary); }
   .dca-bar { display: flex; align-items: center; gap: 8px; }
   .dca-bar .dots { display: flex; gap: 4px; }
@@ -193,6 +171,13 @@
   .reason-list li::before { content: ''; position: absolute; left: 4px; top: 13px; width: 4px; height: 4px; border-radius: 50%; background: var(--text-tertiary); }
   .reason-source { font-size: 11px; color: var(--accent); margin-left: 4px; font-weight: 500; }
 
+  .source-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; cursor: pointer; position: relative; }
+  .source-link:active { background: var(--bg-card-2); }
+  .source-info { flex: 1; min-width: 0; }
+  .source-headline { font-size: 14px; font-weight: 500; line-height: 1.3; }
+  .source-meta { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+  .source-arrow { color: var(--text-tertiary); font-size: 17px; }
+
   .detail-actions { padding: 16px; display: flex; gap: 8px; }
 
   .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: var(--red); color: #fff; padding: 10px 18px; border-radius: 20px; font-size: 14px; font-weight: 500; z-index: 300; opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap; }
@@ -201,6 +186,7 @@
 </head>
 <body>
 
+<!-- WATCHLIST -->
 <div class="view active" data-view="watchlist">
   <div class="nav-bar">
     <button class="nav-btn icon" id="theme-toggle">◐</button>
@@ -211,25 +197,27 @@
   <div id="wl-content"></div>
 </div>
 
+<!-- NEWS -->
 <div class="view" data-view="news">
-  <div class="nav-bar"><span></span></div>
-  <h1 class="large-title">News</h1>
-  <div class="subtitle">Kommt in Schritt 3</div>
-  <div class="empty-state">
-    <div class="ico">📰</div>
-    <h3>News-Feed folgt</h3>
-    <p>Zuerst bringen wir die Kursdaten zum Laufen, dann kommen die News.</p>
+  <div class="nav-bar">
+    <span></span>
+    <button class="nav-btn icon" id="news-refresh" title="Aktualisieren">↻</button>
   </div>
+  <h1 class="large-title">News</h1>
+  <div class="subtitle" id="news-subtitle">Für deine Watchlist</div>
+  <div id="news-content"></div>
 </div>
 
+<!-- DETAIL -->
 <div class="view" data-view="detail">
   <div class="nav-bar">
     <button class="nav-btn nav-back" data-back><span style="font-size:22px;font-weight:600;margin-right:2px;">‹</span> Watchlist</button>
-    <button class="nav-btn icon" id="detail-more">⋯</button>
+    <button class="nav-btn icon">⋯</button>
   </div>
   <div id="detail-content"></div>
 </div>
 
+<!-- TAB BAR -->
 <nav class="tab-bar">
   <div class="tab-bar-inner">
     <button class="tab active" data-tab="watchlist">
@@ -243,6 +231,7 @@
   </div>
 </nav>
 
+<!-- ADD MODAL -->
 <div class="modal-overlay" id="add-modal">
   <div class="modal-sheet">
     <div class="modal-title">Asset hinzufügen</div>
@@ -272,12 +261,11 @@
 <div class="toast" id="toast"></div>
 
 <script>
+// ── Theme ────────────────────────────────────────
 const html = document.documentElement;
 const themeMeta = document.getElementById('theme-meta');
-
 function applyTheme(t) {
-  html.classList.remove('dark','light');
-  html.classList.add(t);
+  html.classList.remove('dark','light'); html.classList.add(t);
   themeMeta.setAttribute('content', t === 'dark' ? '#000000' : '#f2f2f7');
   try { localStorage.setItem('mr-theme', t); } catch(e) {}
 }
@@ -288,6 +276,7 @@ document.getElementById('theme-toggle').addEventListener('click', () => {
   applyTheme(html.classList.contains('dark') ? 'light' : 'dark');
 });
 
+// ── Navigation ───────────────────────────────────
 function showView(name) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.querySelector(`.view[data-view="${name}"]`).classList.add('active');
@@ -296,71 +285,86 @@ function showView(name) {
   if (tab) tab.classList.add('active');
   else document.querySelector('.tab[data-tab="watchlist"]').classList.add('active');
   window.scrollTo(0, 0);
+  if (name === 'news') loadNews();
 }
 document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => showView(t.dataset.tab)));
 document.querySelectorAll('[data-back]').forEach(b => b.addEventListener('click', () => showView('watchlist')));
+document.getElementById('news-refresh').addEventListener('click', () => { newsCache = null; loadNews(); });
 
+// ── Toast ────────────────────────────────────────
 function showToast(msg) {
   const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
+  t.textContent = msg; t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 3000);
 }
 
+// ── API ──────────────────────────────────────────
 const API = '/.netlify/functions';
-
 async function fetchQuote(symbol, type) {
   const res = await fetch(`${API}/fetch-quote?symbol=${symbol}&type=${type}`);
   if (!res.ok) throw new Error(`Kurs nicht gefunden für ${symbol}`);
   return res.json();
 }
-
 async function loadWatchlist() {
   const res = await fetch(`${API}/watchlist`);
   return res.ok ? res.json() : [];
 }
-
 async function saveWatchlist(list) {
-  await fetch(`${API}/watchlist`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(list),
-  });
+  await fetch(`${API}/watchlist`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(list) });
+}
+async function fetchNews(symbols, types) {
+  const s = symbols.join(',');
+  const t = types.join(',');
+  const res = await fetch(`${API}/fetch-news?symbols=${s}&types=${t}`);
+  return res.ok ? res.json() : [];
 }
 
+// ── State ────────────────────────────────────────
 let watchlist = [];
-let detailAsset = null;
+let newsCache = null;
 
+// ── Formatierung ─────────────────────────────────
 function fmtPrice(p, currency) {
   if (!p && p !== 0) return '—';
-  return new Intl.NumberFormat('de-DE', { style:'currency', currency: currency||'EUR', minimumFractionDigits:2, maximumFractionDigits:2 }).format(p);
+  return new Intl.NumberFormat('de-DE', { style:'currency', currency: currency||'EUR', minimumFractionDigits:2, maximumFractionDigits: p > 1000 ? 0 : 2 }).format(p);
 }
 function fmtPct(p) {
-  if (!p && p !== 0) return '—';
-  const sign = p >= 0 ? '+' : '';
-  return `${sign}${p.toFixed(2)} %`;
+  if (p === undefined || p === null) return '—';
+  return `${p >= 0 ? '+' : ''}${p.toFixed(2)} %`;
+}
+function fmtAge(ts) {
+  if (!ts) return '';
+  const diff = Date.now() - ts;
+  const h = Math.floor(diff / 3600000);
+  const d = Math.floor(diff / 86400000);
+  if (h < 1) return 'Gerade eben';
+  if (h < 24) return `vor ${h} Std.`;
+  if (d === 1) return 'Gestern';
+  return `vor ${d} Tagen`;
+}
+function fmtNewsDate(ts) {
+  const d = new Date(ts);
+  const today = new Date();
+  const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
+  if (d.toDateString() === today.toDateString()) return 'Heute';
+  if (d.toDateString() === yesterday.toDateString()) return 'Gestern';
+  return d.toLocaleDateString('de-DE', { day:'numeric', month:'long' });
 }
 
+// ── Watchlist rendern ─────────────────────────────
 function renderWatchlist() {
   const container = document.getElementById('wl-content');
   const subtitle = document.getElementById('wl-subtitle');
-
   if (watchlist.length === 0) {
     subtitle.textContent = 'Noch keine Assets';
-    container.innerHTML = `
-      <div class="empty-state">
-        <div class="ico">📈</div>
-        <h3>Watchlist ist leer</h3>
-        <p>Tippe auf + oben rechts, um dein erstes Asset hinzuzufügen.</p>
-      </div>`;
+    container.innerHTML = `<div class="empty-state"><div class="ico">📈</div><h3>Watchlist ist leer</h3><p>Tippe auf + oben rechts, um dein erstes Asset hinzuzufügen.</p></div>`;
     return;
   }
-
   const groups = {
-    akku:       { label: 'Empfehlungen für deinen Sparplan', items: [] },
+    akku: { label: 'Empfehlungen für deinen Sparplan', items: [] },
     beobachten: { label: 'Beobachten', items: [] },
-    risiko:     { label: 'Risiko', items: [] },
-    neu:        { label: 'Noch nicht analysiert', items: [] },
+    risiko: { label: 'Risiko', items: [] },
+    neu: { label: 'Noch nicht analysiert', items: [] },
   };
   watchlist.forEach(a => {
     const v = a.verdict || 'neu';
@@ -368,81 +372,164 @@ function renderWatchlist() {
     else if (groups[v]) groups[v].items.push(a);
     else groups.neu.items.push(a);
   });
-
   subtitle.textContent = `${watchlist.length} Asset${watchlist.length !== 1 ? 's' : ''}`;
-
   let out = '';
-  for (const [, group] of Object.entries(groups)) {
-    if (group.items.length === 0) continue;
-    out += `<div class="group-header">${group.label}</div><div class="list-group">`;
-    group.items.forEach(a => { out += renderAssetCard(a); });
+  for (const [, g] of Object.entries(groups)) {
+    if (!g.items.length) continue;
+    out += `<div class="group-header">${g.label}</div><div class="list-group">`;
+    g.items.forEach(a => { out += renderCard(a); });
     out += '</div>';
   }
   container.innerHTML = out;
-
   container.querySelectorAll('[data-symbol]').forEach(el => {
     el.addEventListener('click', () => {
-      detailAsset = watchlist.find(a => a.symbol === el.dataset.symbol);
-      if (detailAsset) { renderDetail(detailAsset); showView('detail'); }
+      const a = watchlist.find(x => x.symbol === el.dataset.symbol);
+      if (a) { renderDetail(a); showView('detail'); }
     });
   });
 }
 
-function renderAssetCard(a) {
-  const changeClass = a.changePercent > 0 ? 'pos' : a.changePercent < 0 ? 'neg' : 'neu';
-  const verdict = a.verdict || 'neu';
-  const verdictLabel = { akku:'Akkumulieren', halten:'Halten', beobachten:'Beobachten', risiko:'Risiko', neu:'Ausstehend' }[verdict] || 'Ausstehend';
-  const dcaDots = Array.from({length:5}, (_,i) => `<span class="dot${i < (a.dcaScore||0) ? ' on' : ''}"></span>`).join('');
+function renderCard(a) {
+  const cc = (a.changePercent||0) > 0 ? 'pos' : (a.changePercent||0) < 0 ? 'neg' : 'neu';
+  const v = a.verdict || 'neu';
+  const vl = { akku:'Akkumulieren', halten:'Halten', beobachten:'Beobachten', risiko:'Risiko', neu:'Ausstehend' }[v];
+  const dots = Array.from({length:5},(_,i) => `<span class="dot${i<(a.dcaScore||0)?' on':''}"></span>`).join('');
   return `
   <div class="list-item" data-symbol="${a.symbol}">
     <div class="asset-row">
       <div class="asset-info">
         <div class="asset-symbol">${a.symbol}</div>
-        <div class="asset-name">${a.name || a.symbol}</div>
+        <div class="asset-name">${a.name||a.symbol}</div>
       </div>
       <div>
         <div class="asset-price">${a.price ? fmtPrice(a.price, a.currency) : '<span class="skeleton" style="display:inline-block;width:70px;height:17px;"></span>'}</div>
-        <div class="asset-change ${changeClass}">${a.changePercent !== undefined ? fmtPct(a.changePercent) : ''}</div>
+        <div class="asset-change ${cc}">${a.changePercent !== undefined ? fmtPct(a.changePercent) : ''}</div>
       </div>
     </div>
     <div class="verdict-row">
-      <span class="verdict-pill ${verdict}">${verdictLabel}</span>
-      <span class="dca-mini">${dcaDots}</span>
+      <span class="verdict-pill ${v}">${vl}</span>
+      <span class="dca-mini">${dots}</span>
       <span class="verdict-time">${a.analysisAge || 'Neu'}</span>
     </div>
   </div>`;
 }
 
-function renderDetail(a) {
-  const changeClass = (a.changePercent || 0) >= 0 ? 'pos' : 'neg';
-  const verdict = a.verdict || 'neu';
-  const verdictLabel = { akku:'Akkumulieren', halten:'Halten', beobachten:'Beobachten', risiko:'Risiko', neu:'Ausstehend' }[verdict] || 'Ausstehend';
-  const dcaDots = Array.from({length:5}, (_,i) => `<span class="dot${i < (a.dcaScore||0) ? ' on' : ''}"></span>`).join('');
-  const typeLabel = { stock:'Aktie', etf:'ETF', crypto:'Krypto' }[a.type] || a.type;
+// ── News rendern ──────────────────────────────────
+async function loadNews() {
+  const container = document.getElementById('news-content');
+  const subtitle = document.getElementById('news-subtitle');
 
+  if (watchlist.length === 0) {
+    container.innerHTML = `<div class="empty-state"><div class="ico">📰</div><h3>Watchlist ist leer</h3><p>Füge zuerst Assets zur Watchlist hinzu.</p></div>`;
+    return;
+  }
+
+  if (newsCache) { renderNews(newsCache); return; }
+
+  container.innerHTML = `<div class="news-loading"><div class="spinner"></div><br>News werden geladen…</div>`;
+  subtitle.textContent = 'Wird aktualisiert…';
+
+  try {
+    const symbols = watchlist.map(a => a.symbol);
+    const types = watchlist.map(a => a.type);
+    const news = await fetchNews(symbols, types);
+    newsCache = news;
+    renderNews(news);
+    subtitle.textContent = `${news.length} Artikel · ${new Date().toLocaleTimeString('de-DE', {hour:'2-digit',minute:'2-digit'})} Uhr`;
+  } catch(err) {
+    container.innerHTML = `<div class="empty-state"><div class="ico">⚠️</div><h3>Fehler beim Laden</h3><p>${err.message}</p></div>`;
+  }
+}
+
+function renderNews(news) {
+  const container = document.getElementById('news-content');
+  if (!news.length) {
+    container.innerHTML = `<div class="empty-state"><div class="ico">📭</div><h3>Keine News gefunden</h3><p>Für deine Assets wurden keine aktuellen Nachrichten gefunden.</p></div>`;
+    return;
+  }
+
+  // Nach Datum gruppieren
+  const groups = {};
+  news.forEach(item => {
+    const label = fmtNewsDate(item.datetime);
+    if (!groups[label]) groups[label] = [];
+    groups[label].push(item);
+  });
+
+  // Verdict des zugehörigen Assets
+  const verdictMap = {};
+  watchlist.forEach(a => { verdictMap[a.symbol] = a.verdict || 'neu'; });
+
+  let out = '';
+  for (const [label, items] of Object.entries(groups)) {
+    out += `<div class="group-header">${label}</div><div class="list-group">`;
+    items.forEach(item => {
+      const sym = item.relatedSymbol;
+      const v = verdictMap[sym] || 'neu';
+      const timeStr = new Date(item.datetime).toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit'});
+      out += `
+      <div class="news-item" data-url="${item.url||''}">
+        <div class="news-headline">${escHtml(item.headline)}</div>
+        <div class="news-meta">
+          <span class="news-source">${escHtml(item.source)}</span>
+          <span>·</span>
+          <span>${timeStr} Uhr</span>
+        </div>
+        <div class="news-relates">
+          <span class="related-tag">
+            <span class="verdict-mini ${v}"></span>
+            <span>${sym}</span>
+          </span>
+        </div>
+      </div>`;
+    });
+    out += '</div>';
+  }
+  container.innerHTML = out;
+
+  // News-Links öffnen
+  container.querySelectorAll('[data-url]').forEach(el => {
+    el.addEventListener('click', () => {
+      const url = el.dataset.url;
+      if (url) window.open(url, '_blank');
+    });
+  });
+}
+
+function escHtml(str) {
+  return (str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Detail rendern ────────────────────────────────
+function renderDetail(a) {
+  const cc = (a.changePercent||0) >= 0 ? 'pos' : 'neg';
+  const v = a.verdict || 'neu';
+  const vl = { akku:'Akkumulieren', halten:'Halten', beobachten:'Beobachten', risiko:'Risiko', neu:'Ausstehend' }[v];
+  const dots = Array.from({length:5},(_,i) => `<span class="dot${i<(a.dcaScore||0)?' on':''}"></span>`).join('');
+  const typeLabel = { stock:'Aktie', etf:'ETF', crypto:'Krypto' }[a.type] || a.type;
   document.getElementById('detail-content').innerHTML = `
     <div class="detail-hero">
       <div class="detail-badges">
-        <span class="badge ${a.type === 'crypto' ? 'krypto' : a.type}">${typeLabel}</span>
+        <span class="badge ${a.type==='crypto'?'krypto':a.type}">${typeLabel}</span>
         ${a.isin ? `<span class="badge isin">${a.isin}</span>` : ''}
       </div>
       <h1 class="large-title" style="padding:0;margin-bottom:2px;">${a.symbol}</h1>
-      <div class="detail-name">${a.name || a.symbol}</div>
+      <div class="detail-name">${a.name||a.symbol}</div>
       <div class="detail-price-line">
         <span class="detail-price">${fmtPrice(a.price, a.currency)}</span>
-        <span class="detail-change ${changeClass}">${fmtPct(a.changePercent)} heute</span>
+        <span class="detail-change ${cc}">${fmtPct(a.changePercent)} heute</span>
       </div>
     </div>
     <div class="verdict-hero">
       <div class="verdict-hero-label">Empfehlung für deinen Sparplan</div>
       <div class="verdict-hero-row">
-        <span class="verdict-hero-value ${verdict}">${verdictLabel}</span>
-        <span class="verdict-pill ${verdict}">DCA-Score</span>
+        <span class="verdict-hero-value ${v}">${vl}</span>
+        <span class="verdict-pill ${v}">DCA-Score</span>
       </div>
       <div class="verdict-hero-meta">
         <span class="dca-bar">
-          <span style="font-weight:500;color:var(--text)">${a.dcaScore || 0} / 5</span>
-          <span class="dots">${dcaDots}</span>
+          <span style="font-weight:500;color:var(--text)">${a.dcaScore||0} / 5</span>
+          <span class="dots">${dots}</span>
         </span>
         <span>${a.analysisAge || 'Noch nicht analysiert'}</span>
       </div>
@@ -451,7 +538,7 @@ function renderDetail(a) {
     <div class="list-group">
       <div class="list-item" style="cursor:default;">
         <div style="font-size:14px;color:var(--text-secondary);line-height:1.45;">
-          Noch keine Analyse vorhanden. Tippe auf "Jetzt analysieren", um Claude zu beauftragen.
+          Noch keine Analyse vorhanden. Tippe auf "Jetzt analysieren" um Claude zu beauftragen.
         </div>
       </div>
     </div>
@@ -459,70 +546,59 @@ function renderDetail(a) {
       <button class="btn btn-secondary" id="btn-remove">Entfernen</button>
       <button class="btn btn-primary" id="btn-analyze">Jetzt analysieren</button>
     </div>`;
-
   document.getElementById('btn-remove').addEventListener('click', () => {
     watchlist = watchlist.filter(x => x.symbol !== a.symbol);
-    saveWatchlist(watchlist);
-    renderWatchlist();
-    showView('watchlist');
+    saveWatchlist(watchlist); renderWatchlist(); showView('watchlist');
   });
   document.getElementById('btn-analyze').addEventListener('click', () => {
-    showToast('Analyse kommt in Schritt 4 🙂');
+    showToast('KI-Analyse kommt in Schritt 4 🤖');
   });
 }
 
+// ── Asset hinzufügen ──────────────────────────────
 document.getElementById('add-btn').addEventListener('click', () => {
   document.getElementById('add-modal').classList.add('open');
-  document.getElementById('input-symbol').focus();
+  setTimeout(() => document.getElementById('input-symbol').focus(), 100);
 });
 document.getElementById('modal-cancel').addEventListener('click', () => {
   document.getElementById('add-modal').classList.remove('open');
 });
-
 document.getElementById('modal-add').addEventListener('click', async () => {
   const symbol = document.getElementById('input-symbol').value.trim().toUpperCase();
   const type = document.getElementById('input-type').value;
   const note = document.getElementById('input-note').value.trim();
-
   if (!symbol) { showToast('Bitte Symbol eingeben'); return; }
-  if (watchlist.find(a => a.symbol === symbol)) { showToast(`${symbol} ist bereits in der Watchlist`); return; }
-
+  if (watchlist.find(a => a.symbol === symbol)) { showToast(`${symbol} bereits in der Watchlist`); return; }
   document.getElementById('add-modal').classList.remove('open');
-
+  document.getElementById('input-symbol').value = '';
+  document.getElementById('input-note').value = '';
   const newAsset = { symbol, type, note, verdict: null, dcaScore: 0, price: null, changePercent: undefined };
   watchlist.push(newAsset);
   renderWatchlist();
-
+  newsCache = null; // News-Cache invalidieren
   try {
-    const quote = await fetchQuote(symbol, type);
+    const q = await fetchQuote(symbol, type);
     const idx = watchlist.findIndex(a => a.symbol === symbol);
-    if (idx >= 0) {
-      watchlist[idx] = { ...watchlist[idx], ...quote };
-      renderWatchlist();
-      await saveWatchlist(watchlist);
-    }
-  } catch (err) {
+    if (idx >= 0) { watchlist[idx] = { ...watchlist[idx], ...q }; renderWatchlist(); await saveWatchlist(watchlist); }
+  } catch(err) {
     showToast(`Kurs für ${symbol} nicht gefunden`);
     watchlist = watchlist.filter(a => a.symbol !== symbol);
     renderWatchlist();
   }
 });
 
+// ── Init ──────────────────────────────────────────
 (async () => {
   try {
     watchlist = await loadWatchlist();
     const updates = watchlist.map(async a => {
-      try {
-        const q = await fetchQuote(a.symbol, a.type);
-        return { ...a, ...q };
-      } catch { return a; }
+      try { return { ...a, ...await fetchQuote(a.symbol, a.type) }; }
+      catch { return a; }
     });
     watchlist = await Promise.all(updates);
     renderWatchlist();
     await saveWatchlist(watchlist);
-  } catch (err) {
-    renderWatchlist();
-  }
+  } catch { renderWatchlist(); }
 })();
 </script>
 </body>
