@@ -355,6 +355,16 @@
   .sim-pos-detail-grid { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; color: var(--text-secondary); padding-top: 10px; }
   .sim-pos-detail-grid span b { color: var(--text); font-weight: 600; }
 
+
+  /* Kollabierbare Watchlist */
+  .list-item.collapsible { padding: 0; }
+  .list-item.collapsible .item-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 16px; cursor: pointer; }
+  .list-item.collapsible .item-header:active { background: var(--bg-card-2); }
+  .item-chevron { color: var(--text-tertiary); font-size: 13px; transition: transform 0.2s; flex-shrink: 0; }
+  .list-item.collapsible.open .item-chevron { transform: rotate(90deg); }
+  .item-details { display: none; padding: 0 16px 14px; border-top: 0.5px solid var(--separator); }
+  .list-item.collapsible.open .item-details { display: block; }
+
 </style>
 </head>
 <body>
@@ -652,10 +662,37 @@ function renderWatchlist() {
   }
   container.innerHTML = out;
   container.querySelectorAll('[data-symbol]').forEach(el => {
-    el.addEventListener('click', () => {
-      const a = watchlist.find(x => x.symbol === el.dataset.symbol);
-      if (a) { renderDetail(a); showView('detail'); }
-    });
+    // Header: kollabieren
+    const header = el.querySelector('.item-header');
+    if (header) {
+      header.addEventListener('click', function(e) {
+        el.classList.toggle('open');
+      });
+    }
+    // Detail-Bereich: zur Detail-Ansicht
+    const details = el.querySelector('.item-details');
+    if (details) {
+      // Verdict-Row antippbar für Detail-View
+      const verdictRow = details.querySelector('.verdict-row');
+      if (verdictRow) {
+        verdictRow.style.cursor = 'pointer';
+        verdictRow.addEventListener('click', function(e) {
+          e.stopPropagation();
+          const a = watchlist.find(x => x.symbol === el.dataset.symbol);
+          if (a) { renderDetail(a); showView('detail'); }
+        });
+        // "Öffnen" Link
+        const openLink = document.createElement('span');
+        openLink.textContent = 'Details öffnen ›';
+        openLink.style.cssText = 'font-size:13px;color:var(--accent);font-weight:600;margin-top:8px;display:block;cursor:pointer;';
+        openLink.addEventListener('click', function(e) {
+          e.stopPropagation();
+          const a = watchlist.find(x => x.symbol === el.dataset.symbol);
+          if (a) { renderDetail(a); showView('detail'); }
+        });
+        details.appendChild(openLink);
+      }
+    }
   });
 }
 
@@ -900,7 +937,7 @@ function renderSuggestions(suggestions) {
       <div class="sug-news">📰 ${escHtml(s.newsAnker)}</div>
       <div class="sug-footer">
         ${s.risiko ? `<span class="sug-risiko">⚠ ${escHtml(s.risiko)}</span>` : ''}
-        <button class="sug-add-btn" data-symbol="${s.symbol}" data-type="${s.type}" data-name="${escHtml(s.name)}">+ Watchlist</button>
+        ${watchlist.some(a => a.symbol === s.symbol) ? '<span style="font-size:12px;color:var(--green);font-weight:600;">✓ In Watchlist</span>' : `<button class="sug-add-btn" data-symbol="${s.symbol}" data-type="${s.type}" data-name="${escHtml(s.name)}">+ Watchlist</button>`}
       </div>
     </div>`).join('')}</div>`;
 
