@@ -211,6 +211,36 @@
   .sri-type { font-size: 11px; color: var(--text-secondary); margin-top: 1px; }
   .search-spinner { text-align: center; padding: 12px; color: var(--text-secondary); font-size: 13px; }
 
+  /* Suggestions */
+  .suggestion-card {
+    padding: 14px 16px;
+    cursor: pointer;
+    position: relative;
+  }
+  .suggestion-card + .suggestion-card::before {
+    content: ''; position: absolute; top: 0; left: 16px; right: 0;
+    height: 0.5px; background: var(--separator);
+  }
+  .suggestion-card:active { background: var(--bg-card-2); }
+  .sug-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .sug-symbol { font-size: 17px; font-weight: 700; letter-spacing: -0.4px; }
+  .sug-name { font-size: 13px; color: var(--text-secondary); flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sug-grund { font-size: 14px; line-height: 1.4; margin-bottom: 8px; }
+  .sug-news { font-size: 12px; color: var(--text-secondary); margin-bottom: 10px; line-height: 1.35; }
+  .sug-footer { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .sug-risiko { font-size: 11px; color: var(--orange); background: var(--orange-soft); padding: 3px 8px; border-radius: 5px; }
+  .sug-add-btn {
+    margin-left: auto;
+    background: var(--accent); color: #000;
+    border: none; border-radius: 8px;
+    font-size: 12px; font-weight: 700;
+    padding: 6px 12px; cursor: pointer;
+    font-family: inherit;
+  }
+  html.light .sug-add-btn { color: #fff; }
+  .sug-add-btn:active { opacity: 0.7; }
+  .sug-loading { text-align: center; padding: 24px 16px; color: var(--text-secondary); font-size: 14px; }
+
   .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: var(--red); color: #fff; padding: 10px 18px; border-radius: 20px; font-size: 14px; font-weight: 500; z-index: 300; opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap; }
   .toast.show { opacity: 1; }
 </style>
@@ -237,6 +267,16 @@
   <h1 class="large-title">News</h1>
   <div class="subtitle" id="news-subtitle">Für deine Watchlist</div>
   <div id="news-content"></div>
+
+  <div id="suggestions-section">
+    <div class="group-header" style="display:flex;justify-content:space-between;align-items:center;">
+      <span>💡 KI-Vorschläge aus den News</span>
+      <span id="sug-refresh-btn" style="font-size:11px;color:var(--accent);cursor:pointer;text-transform:none;letter-spacing:0;padding-right:16px;">Aktualisieren</span>
+    </div>
+    <div id="suggestions-content">
+      <div class="list-group"><div class="sug-loading"><div class="spinner"></div><br>Analyse läuft…</div></div>
+    </div>
+  </div>
 </div>
 
 <!-- DETAIL -->
@@ -320,7 +360,7 @@ function showView(name) {
   if (tab) tab.classList.add('active');
   else document.querySelector('.tab[data-tab="watchlist"]').classList.add('active');
   window.scrollTo(0, 0);
-  if (name === 'news') loadNews();
+  if (name === 'news') { loadNews(); loadSuggestions(); }
 }
 document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => showView(t.dataset.tab)));
 document.querySelectorAll('[data-back]').forEach(b => b.addEventListener('click', () => showView('watchlist')));
@@ -576,6 +616,96 @@ async function runAnalysis(a, forceRefresh = false) {
   }
 }
 
+
+// ── News-Vorschläge ──────────────────────────────
+let suggestionsCache = null;
+
+async function loadSuggestions(forceRefresh = false) {
+  const container = document.getElementById('suggestions-content');
+  if (!container) return;
+
+  if (suggestionsCache && !forceRefresh) {
+    renderSuggestions(suggestionsCache);
+    return;
+  }
+
+  container.innerHTML = '<div class="list-group"><div class="sug-loading"><div class="spinner"></div><br>Claude analysiert Markt-News…</div></div>';
+
+  try {
+    const res = await fetch(`${API}/news-suggestions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        watchlistSymbols: watchlist.map(a => a.symbol),
+        forceRefresh,
+      }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const suggestions = await res.json();
+    suggestionsCache = suggestions;
+    renderSuggestions(suggestions);
+  } catch(err) {
+    container.innerHTML = `<div class="list-group"><div class="sug-loading">Fehler: ${err.message.slice(0,60)}</div></div>`;
+  }
+}
+
+function renderSuggestions(suggestions) {
+  const container = document.getElementById('suggestions-content');
+  if (!suggestions?.length) {
+    container.innerHTML = '<div class="list-group"><div class="sug-loading">Keine Vorschläge verfügbar</div></div>';
+    return;
+  }
+  const typeLabel = { stock:'Aktie', etf:'ETF', crypto:'Krypto' };
+  container.innerHTML = `<div class="list-group">${suggestions.map(s => `
+    <div class="suggestion-card">
+      <div class="sug-header">
+        <span class="sug-symbol">${escHtml(s.symbol)}</span>
+        <span class="badge ${s.type === 'crypto' ? 'krypto' : s.type}" style="font-size:9px;">${typeLabel[s.type]||s.type}</span>
+        <span class="sug-name">${escHtml(s.name)}</span>
+      </div>
+      <div class="sug-grund">${escHtml(s.grund)}</div>
+      <div class="sug-news">📰 ${escHtml(s.newsAnker)}</div>
+      <div class="sug-footer">
+        ${s.risiko ? `<span class="sug-risiko">⚠ ${escHtml(s.risiko)}</span>` : ''}
+        <button class="sug-add-btn" data-symbol="${s.symbol}" data-type="${s.type}" data-name="${escHtml(s.name)}">+ Watchlist</button>
+      </div>
+    </div>`).join('')}</div>`;
+
+  // Add-Buttons
+  container.querySelectorAll('.sug-add-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const symbol = btn.dataset.symbol;
+      const type = btn.dataset.type;
+      const name = btn.dataset.name;
+      if (watchlist.find(a => a.symbol === symbol)) { showToast(`${symbol} bereits in der Watchlist`); return; }
+      btn.textContent = '…';
+      btn.disabled = true;
+      const newAsset = { symbol, type, name, verdict: null, dcaScore: 0, price: null, changePercent: undefined };
+      watchlist.push(newAsset);
+      renderWatchlist();
+      newsCache = null;
+      try {
+        const q = await fetchQuote(symbol, type);
+        const idx = watchlist.findIndex(a => a.symbol === symbol);
+        if (idx >= 0) { watchlist[idx] = { ...watchlist[idx], ...q }; renderWatchlist(); await saveWatchlist(watchlist); }
+        btn.textContent = '✓ Hinzugefügt';
+        showToast(`${symbol} zur Watchlist hinzugefügt`);
+      } catch {
+        showToast(`Kurs für ${symbol} nicht gefunden`);
+        watchlist = watchlist.filter(a => a.symbol !== symbol);
+        renderWatchlist();
+        btn.textContent = '+ Watchlist';
+        btn.disabled = false;
+      }
+    });
+  });
+}
+
+document.getElementById('sug-refresh-btn')?.addEventListener('click', () => {
+  suggestionsCache = null;
+  loadSuggestions(true);
+});
 
 // ── Analyse rendern ──────────────────────────────
 function renderAnalysis(an) {
