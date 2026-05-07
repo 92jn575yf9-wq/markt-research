@@ -381,6 +381,21 @@
   .sell-dialog-meta { font-size: 13px; color: var(--text-secondary); margin-bottom: 14px; }
   .sell-dialog-actions { display: flex; gap: 8px; }
 
+
+  /* Nachkauf */
+  .nachkauf-form { background: var(--bg-card-2); border-radius: 10px; padding: 12px; margin-top: 10px; }
+  .nachkauf-row { display: flex; gap: 8px; align-items: flex-end; margin-bottom: 8px; }
+  .nachkauf-field { flex: 1; }
+  .nachkauf-label { font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; }
+  .nachkauf-input { width: 100%; padding: 8px 10px; background: var(--bg-card); border: 0.5px solid var(--separator); border-radius: 8px; color: var(--text); font-size: 15px; font-family: inherit; outline: none; }
+  .nachkauf-input:focus { border-color: var(--accent); }
+  .nachkauf-btn { background: var(--accent); color: #000; border: none; border-radius: 8px; padding: 8px 14px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; white-space: nowrap; }
+  html.light .nachkauf-btn { color: #fff; }
+  .buys-history { margin-top: 10px; }
+  .buys-history-title { font-size: 11px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 6px; }
+  .buy-entry { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-secondary); padding: 3px 0; border-bottom: 0.5px solid var(--separator); }
+  .buy-entry:last-child { border-bottom: none; }
+
 </style>
 </head>
 <body>
@@ -1437,7 +1452,29 @@ function renderSimulator() {
         '</div>' +
         '<div class="sim-pos-details">' +
           '<div class="sim-pos-detail-grid">' + detailHtml + '</div>' +
+          // Kauf-History (nur Einzelkauf)
+          (pos.simType === 'single' && pos.buys && pos.buys.length > 1 ?
+            '<div class="buys-history">' +
+              '<div class="buys-history-title">Kaufhistorie (Ø ' + fmtEur(pos.avgBuyPrice||pos.buyPrice) + ')</div>' +
+              pos.buys.map(function(b,i) {
+                return '<div class="buy-entry"><span>' + (b.date||'') + '</span><span>' + b.shares + ' St. à ' + fmtEur(b.price) + '</span><span>' + fmtEur(b.invested) + '</span></div>';
+              }).join('') +
+            '</div>'
+          : pos.simType === 'single' ?
+            '<div style="font-size:12px;color:var(--text-secondary);margin-top:6px;">Ø-Kurs: <b>' + fmtEur(pos.avgBuyPrice||pos.buyPrice) + '</b></div>'
+          : '') +
+          // Nachkaufen-Form (nur Einzelkauf)
+          (pos.simType === 'single' ?
+            '<div class="nachkauf-form" id="nk-form-' + pos.id + '" style="display:none;">' +
+              '<div class="nachkauf-row">' +
+                '<div class="nachkauf-field"><div class="nachkauf-label">Kurs (aktuell)</div><input class="nachkauf-input" id="nk-price-' + pos.id + '" type="number" step="0.01" value="' + (pos.currentPrice||'').toString() + '"></div>' +
+                '<div class="nachkauf-field"><div class="nachkauf-label">Anzahl Stück</div><input class="nachkauf-input" id="nk-shares-' + pos.id + '" type="number" step="0.001" placeholder="z.B. 5"></div>' +
+              '</div>' +
+              '<button class="nachkauf-btn" data-nk-id="' + pos.id + '">Nachkauf bestätigen</button>' +
+            '</div>'
+          : '') +
           '<div style="display:flex;gap:8px;margin-top:10px;">' +
+            (pos.simType === 'single' ? '<button class="sim-nk-btn btn btn-secondary" data-id="' + pos.id + '" style="flex:1;font-size:13px;padding:8px;">+ Nachkaufen</button>' : '') +
             '<button class="sim-sell-btn btn btn-primary" data-id="' + pos.id + '" style="flex:1;font-size:13px;padding:8px;">Verkaufen</button>' +
             '<button class="sim-del-btn btn btn-secondary" data-id="' + pos.id + '" style="flex:1;font-size:13px;padding:8px;">Entfernen</button>' +
           '</div>' +
@@ -1482,6 +1519,44 @@ function renderSimulator() {
   content.querySelectorAll('[data-pos-id]').forEach(function(el) {
     el.querySelector('.sim-pos-header').addEventListener('click', function() {
       el.classList.toggle('open');
+    });
+  });
+
+  // Nachkaufen-Toggle
+  content.querySelectorAll('.sim-nk-btn').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      const form = document.getElementById('nk-form-' + btn.dataset.id);
+      if (form) form.style.display = form.style.display === 'none' ? 'block' : 'none';
+    });
+  });
+
+  // Nachkauf bestätigen
+  content.querySelectorAll('[data-nk-id]').forEach(function(btn) {
+    btn.addEventListener('click', async function(e) {
+      e.stopPropagation();
+      const posId = btn.dataset.nkId;
+      const priceInput = parseFloat(document.getElementById('nk-price-' + posId).value);
+      const sharesInput = parseFloat(document.getElementById('nk-shares-' + posId).value);
+      if (!priceInput || !sharesInput || sharesInput <= 0) { showToast('Kurs und Stückzahl angeben'); return; }
+      const idx = simPortfolio.findIndex(function(p) { return p.id === posId; });
+      if (idx < 0) return;
+      const pos = simPortfolio[idx];
+      const newBuy = { price: priceInput, shares: sharesInput, invested: priceInput * sharesInput, date: new Date().toLocaleDateString('de-DE') };
+      if (!pos.buys) pos.buys = [{ price: pos.buyPrice, shares: pos.shares, invested: pos.buyPrice*pos.shares, date: pos.buyDate||'' }];
+      pos.buys.push(newBuy);
+      // Neuberechnung
+      const totalInvested = pos.buys.reduce(function(s,b){return s+b.invested;},0);
+      const totalShares = pos.buys.reduce(function(s,b){return s+b.shares;},0);
+      pos.shares = totalShares;
+      pos.invested = totalInvested;
+      pos.avgBuyPrice = totalInvested / totalShares;
+      pos.currentValue = (pos.currentPrice||priceInput) * totalShares;
+      pos.pl = pos.currentValue - totalInvested;
+      pos.plPct = (pos.pl / totalInvested) * 100;
+      await saveSimPortfolio();
+      renderSimulator();
+      showToast('Nachkauf ' + sharesInput + ' St. à ' + fmtEur(priceInput) + ' gespeichert');
     });
   });
 
@@ -1704,8 +1779,14 @@ document.getElementById('sim-confirm').addEventListener('click', async function(
       simPortfolio[idx].name = q.name || pos.name;
       simPortfolio[idx].avgBuyPrice = simPortfolio[idx].avgBuyPrice || q.price;
       if (simType === 'single') {
-        simPortfolio[idx].currentValue = q.price * pos.shares;
-        simPortfolio[idx].invested = pos.buyPrice * pos.shares;
+        const buys = simPortfolio[idx].buys || [{ price: pos.buyPrice, shares: pos.shares, invested: pos.buyPrice*pos.shares, date: pos.buyDate }];
+        simPortfolio[idx].buys = buys;
+        const totalInvested = buys.reduce(function(s,b){return s+b.invested;},0);
+        const totalShares = buys.reduce(function(s,b){return s+b.shares;},0);
+        simPortfolio[idx].invested = totalInvested;
+        simPortfolio[idx].totalShares = totalShares;
+        simPortfolio[idx].avgBuyPrice = totalShares > 0 ? totalInvested/totalShares : q.price;
+        simPortfolio[idx].currentValue = q.price * totalShares;
       } else {
         const start = new Date(pos.startDate);
         const now = new Date();
