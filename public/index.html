@@ -600,6 +600,9 @@ document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () =>
 document.querySelectorAll('[data-back]').forEach(b => b.addEventListener('click', () => showView('watchlist')));
 document.getElementById('news-refresh').addEventListener('click', () => { newsCache = null; loadNews(true); });
 
+// ── View State ───────────────────────────────────
+const wlCompact = false; // View-Toggle deaktiviert
+
 // ── Toast ────────────────────────────────────────
 function showToast(msg) {
   const t = document.getElementById('toast');
