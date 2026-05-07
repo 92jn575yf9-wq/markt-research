@@ -140,6 +140,7 @@
   .badge.aktie { background: var(--accent-soft); color: var(--accent); }
   .badge.etf { background: var(--blue-soft); color: var(--blue); }
   .badge.krypto { background: var(--orange-soft); color: var(--orange); }
+  .badge.commodity { background: rgba(255, 69, 58, 0.12); color: #ff9500; }
   .badge.isin { background: var(--bg-card-2); color: var(--text-secondary); font-family: ui-monospace,"SF Mono",Menlo,monospace; font-weight: 500; border: 0.5px solid var(--separator); text-transform: none; }
   .detail-name { font-size: 17px; color: var(--text-secondary); margin-bottom: 10px; }
   .detail-price-line { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
@@ -576,7 +577,8 @@ function showToast(msg) {
 // ── API ──────────────────────────────────────────
 const API = '/.netlify/functions';
 async function fetchQuote(symbol, type) {
-  const res = await fetch(`${API}/fetch-quote?symbol=${symbol}&type=${type}`);
+  const actualType = symbol.endsWith('=F') ? 'commodity' : type;
+  const res = await fetch(`${API}/fetch-quote?symbol=${symbol}&type=${actualType}`);
   if (!res.ok) throw new Error(`Kurs nicht gefunden für ${symbol}`);
   return res.json();
 }
@@ -895,7 +897,7 @@ function renderSuggestions(suggestions) {
     container.innerHTML = '<div class="list-group"><div class="sug-loading">Keine Vorschläge verfügbar</div></div>';
     return;
   }
-  const typeLabel = { stock:'Aktie', etf:'ETF', crypto:'Krypto' };
+  const typeLabel = { stock:'Aktie', etf:'ETF', crypto:'Krypto', commodity:'Rohstoff' };
   container.innerHTML = `<div class="list-group">${suggestions.map(s => `
     <div class="suggestion-card">
       <div class="sug-header">
@@ -1008,16 +1010,16 @@ function renderDetail(a) {
   const v = a.verdict || 'neu';
   const vl = { akku:'Akkumulieren', halten:'Halten', beobachten:'Beobachten', risiko:'Risiko', neu:'Ausstehend' }[v];
   const dots = Array.from({length:5},(_,i) => '<span class="dot'+(i<(a.dcaScore||0)?' on':'')+'"></span>').join('');
-  const typeLabel = { stock:'Aktie', etf:'ETF', crypto:'Krypto' }[a.type] || a.type;
+  const typeLabel = { stock:'Aktie', etf:'ETF', crypto:'Krypto', commodity:'Rohstoff' }[a.type] || a.type;
   const analysisHtml = a.analysis ? renderAnalysis(a.analysis) : '<div class="list-group"><div class="list-item" style="cursor:default;"><div style="font-size:14px;color:var(--text-secondary);line-height:1.45;">Noch keine Analyse vorhanden. Tippe auf \"Jetzt analysieren\" um Claude zu beauftragen.</div></div></div>';
 
   document.getElementById('detail-content').innerHTML =
     '<div class="detail-hero">' +
       '<div class="detail-badges">' +
-        '<span class="badge '+(a.type==='crypto'?'krypto':a.type)+'">'+typeLabel+'</span>' +
+        '<span class="badge '+(a.type==='crypto'?'krypto':a.type==='commodity'?'commodity':a.type)+'">'+typeLabel+'</span>' +
         (a.isin ? '<span class="badge isin">'+a.isin+'</span>' : '') +
       '</div>' +
-      '<h1 class="large-title" style="padding:0;margin-bottom:2px;">'+a.symbol+'</h1>' +
+      '<h1 class="large-title" style="padding:0;margin-bottom:2px;">'+a.symbol.replace('=F','')+'</h1>' +
       '<div class="detail-name">'+(a.name||a.symbol)+'</div>' +
       '<div class="detail-price-line">' +
         '<span class="detail-price">'+fmtPrice(a.price, a.currency)+'</span>' +
@@ -1210,7 +1212,7 @@ async function searchSymbol(q) {
       container.innerHTML = '<div class="search-spinner">Keine Ergebnisse</div>';
       return;
     }
-    const typeLabel = { stock:'Aktie', etf:'ETF', crypto:'Krypto' };
+    const typeLabel = { stock:'Aktie', etf:'ETF', crypto:'Krypto', commodity:'Rohstoff' };
     container.innerHTML = results.map(r => `
       <div class="search-result-item" data-symbol="${r.symbol}" data-type="${r.type}" data-name="${r.name.replace(/"/g,'&quot;')}">
         <div class="sri-symbol">${r.symbol}</div>
@@ -1524,7 +1526,7 @@ async function simSearchSymbol(q) {
     const res = await fetch(API + '/search-symbol?q=' + encodeURIComponent(q));
     const results = await res.json();
     if (!results.length) { container.innerHTML = '<div class="search-spinner">Keine Ergebnisse</div>'; return; }
-    const typeLabel = {stock:'Aktie', etf:'ETF', crypto:'Krypto'};
+    const typeLabel = {stock:'Aktie', etf:'ETF', crypto:'Krypto', commodity:'Rohstoff'};
     container.innerHTML = results.map(function(r) {
       return '<div class="search-result-item" data-symbol="'+r.symbol+'" data-type="'+r.type+'" data-name="'+escHtml(r.name)+'">' +
         '<div class="sri-symbol">'+r.symbol+'</div>' +
