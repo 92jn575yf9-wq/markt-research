@@ -1810,23 +1810,6 @@ document.getElementById('sim-confirm').addEventListener('click', async function(
   } catch { /* ignorieren */ }
 });
 
-// ── Watchlist View Toggle ─────────────────────────
-let wlCompact = false;
-try { wlCompact = localStorage.getItem('wl-compact') === '1'; } catch(e) {}
-
-function updateToggleBtn() {
-  const btn = document.getElementById('wl-view-toggle');
-  if (btn) btn.textContent = wlCompact ? '☰' : '⊞';
-}
-
-document.getElementById('wl-view-toggle').addEventListener('click', function() {
-  wlCompact = !wlCompact;
-  try { localStorage.setItem('wl-compact', wlCompact ? '1' : '0'); } catch(e) {}
-  updateToggleBtn();
-  renderWatchlist();
-});
-updateToggleBtn();
-
 // ── Alle analysieren ──────────────────────────────
 document.getElementById('analyze-all-btn').addEventListener('click', async function() {
   const unanalyzed = watchlist.filter(function(a) { return !a.verdict; });
