@@ -363,6 +363,24 @@
   .sim-pos-pl { font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 500; text-align: right; margin-top: 2px; }
   .sim-del-btn { background: var(--red-soft); color: var(--red); border: none; border-radius: 8px; padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; margin-top: 10px; }
 
+
+  /* Verkauft-Bereich */
+  .sim-sold-item { padding: 12px 16px; position: relative; }
+  .sim-sold-item + .sim-sold-item { border-top: 0.5px solid var(--separator); }
+  .sim-sold-header { display: flex; justify-content: space-between; align-items: flex-start; }
+  .sim-sold-symbol { font-size: 15px; font-weight: 700; }
+  .sim-sold-date { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; }
+  .sim-sold-pl { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .sim-sold-detail { font-size: 11px; color: var(--text-secondary); margin-top: 6px; }
+
+  /* Sell-Confirm Dialog */
+  .sell-dialog { background: var(--bg-card); border-radius: 14px; margin: 0 16px; padding: 16px; box-shadow: var(--shadow-sm); display: none; }
+  .sell-dialog.open { display: block; }
+  .sell-dialog-title { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+  .sell-dialog-pl { font-size: 28px; font-weight: 700; margin: 10px 0; font-variant-numeric: tabular-nums; }
+  .sell-dialog-meta { font-size: 13px; color: var(--text-secondary); margin-bottom: 14px; }
+  .sell-dialog-actions { display: flex; gap: 8px; }
+
 </style>
 </head>
 <body>
@@ -578,8 +596,8 @@ function showToast(msg) {
 const API = '/.netlify/functions';
 async function fetchQuote(symbol, type) {
   const actualType = symbol.endsWith('=F') ? 'commodity' : type;
-  const res = await fetch(`${API}/fetch-quote?symbol=${symbol}&type=${actualType}`);
-  if (!res.ok) throw new Error(`Kurs nicht gefunden für ${symbol}`);
+  const res = await fetch(API+'/fetch-quote?symbol='+symbol+'&type='+actualType);
+  if (!res.ok) throw new Error('Kurs nicht gefunden für '+symbol);
   return res.json();
 }
 async function loadWatchlist() {
@@ -1270,22 +1288,32 @@ document.getElementById('modal-add').addEventListener('click', async () => {
 
 
 // ═══════════════ SIMULATOR ═══════════════
-let simPortfolio = []; // [{id, symbol, name, type, assetType, currency, simType, buyPrice, shares, invested, monthlyAmount, startDate, buyDate, currentPrice, currentValue, pl, plPct}]
+let simPortfolio = [];
+let simSoldPositions = []; // [{id, symbol, name, type, assetType, currency, simType, buyPrice, shares, invested, monthlyAmount, startDate, buyDate, currentPrice, currentValue, pl, plPct}]
 let simSearchTimer = null;
 let simSelectedAsset = null;
 
 async function loadSimPortfolio() {
   try {
     const res = await fetch(API + '/simulator-portfolio');
-    simPortfolio = res.ok ? await res.json() : [];
-  } catch { simPortfolio = []; }
+    const data = res.ok ? await res.json() : [];
+    // Unterscheide aktive und verkaufte Positionen
+    if (Array.isArray(data) && data.length && data[0] && data[0]._type === 'portfolio_v2') {
+      simPortfolio = data[0].active || [];
+      simSoldPositions = data[0].sold || [];
+    } else {
+      simPortfolio = Array.isArray(data) ? data : [];
+      simSoldPositions = [];
+    }
+  } catch { simPortfolio = []; simSoldPositions = []; }
 }
 
 async function saveSimPortfolio() {
+  const payload = [{ _type: 'portfolio_v2', active: simPortfolio, sold: simSoldPositions }];
   await fetch(API + '/simulator-portfolio', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
-    body: JSON.stringify(simPortfolio)
+    body: JSON.stringify(payload)
   });
 }
 
@@ -1380,16 +1408,22 @@ function renderSimulator() {
       : '<span>Monatlich: <b>' + fmtEur(pos.monthlyAmount) + '</b></span>' +
         '<span>Seit: <b>' + new Date(pos.startDate).toLocaleDateString('de-DE',{month:'short',year:'numeric'}) + '</b></span>';
 
-    posHtml +=
-      // Wrapper — data-pos-id für Toggle, standardmässig GESCHLOSSEN
-      '<div class="sim-position" data-pos-id="' + pos.id + '">' +
+    // KI-Verdict aus Watchlist holen
+    const wlAsset = watchlist.find(function(a) { return a.symbol === pos.symbol; });
+    const verdict = wlAsset && wlAsset.verdict ? wlAsset.verdict : null;
+    const vl = { akku:'Kaufen', beobachten:'Abwarten', halten:'Abwarten', risiko:'Vorsicht' };
+    const verdictBadge = verdict
+      ? '<span class="verdict-pill ' + verdict + '" style="font-size:10px;padding:3px 8px;">' + (vl[verdict]||verdict) + '</span>'
+      : '';
 
-        // ── Immer sichtbar: Header ──────────────────
+    posHtml +=
+      '<div class="sim-position" data-pos-id="' + pos.id + '">' +
         '<div class="sim-pos-header">' +
           '<div style="min-width:0;flex:1;">' +
-            '<div style="display:flex;align-items:center;gap:6px;">' +
+            '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">' +
               '<span class="sim-pos-symbol">' + pos.symbol + '</span>' +
               '<span class="sim-pos-type ' + pos.simType + '">' + typeLabel + '</span>' +
+              verdictBadge +
             '</div>' +
             '<div class="sim-pos-name">' + escHtml(pos.name||pos.symbol) + '</div>' +
           '</div>' +
@@ -1401,26 +1435,85 @@ function renderSimulator() {
           '</div>' +
           '<div class="sim-pos-chevron">›</div>' +
         '</div>' +
-
-        // ── Nur bei .open sichtbar: Details ─────────
         '<div class="sim-pos-details">' +
           '<div class="sim-pos-detail-grid">' + detailHtml + '</div>' +
-          '<button class="sim-del-btn" data-id="' + pos.id + '">Entfernen</button>' +
+          '<div style="display:flex;gap:8px;margin-top:10px;">' +
+            '<button class="sim-sell-btn btn btn-primary" data-id="' + pos.id + '" style="flex:1;font-size:13px;padding:8px;">Verkaufen</button>' +
+            '<button class="sim-del-btn btn btn-secondary" data-id="' + pos.id + '" style="flex:1;font-size:13px;padding:8px;">Entfernen</button>' +
+          '</div>' +
         '</div>' +
-
       '</div>';
   });
   posHtml += '</div>';
+
+  // Verkaufte Positionen
+  if (simSoldPositions.length > 0) {
+    posHtml += '<div class="group-header">Realisiert</div><div class="list-group">';
+    simSoldPositions.slice().reverse().forEach(function(pos) {
+      const plSign = (pos.realizedPl||0) >= 0 ? '+' : '';
+      const plColor = (pos.realizedPl||0) >= 0 ? 'var(--green)' : 'var(--red)';
+      posHtml +=
+        '<div class="sim-sold-item">' +
+          '<div class="sim-sold-header">' +
+            '<div>' +
+              '<div class="sim-sold-symbol">' + pos.symbol + '</div>' +
+              '<div class="sim-sold-date">' + pos.soldDate + '</div>' +
+            '</div>' +
+            '<div style="text-align:right;">' +
+              '<div class="sim-sold-pl" style="color:' + plColor + '">' +
+                plSign + fmtEur(pos.realizedPl||0) +
+              '</div>' +
+              '<div style="font-size:11px;color:' + plColor + '">' +
+                plSign + (pos.realizedPlPct||0).toFixed(2) + '%' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="sim-sold-detail">' +
+            'Einstieg ' + fmtEur(pos.invested||0) + ' → Ausstieg ' + fmtEur(pos.exitValue||0) +
+          '</div>' +
+        '</div>';
+    });
+    posHtml += '</div>';
+  }
+
   content.innerHTML = posHtml;
 
-  // Toggle: Header antippen = aufklappen/zuklappen
+  // Toggle
   content.querySelectorAll('[data-pos-id]').forEach(function(el) {
     el.querySelector('.sim-pos-header').addEventListener('click', function() {
       el.classList.toggle('open');
     });
   });
 
-  // Entfernen-Button
+  // Verkaufen
+  content.querySelectorAll('.sim-sell-btn').forEach(function(btn) {
+    btn.addEventListener('click', async function(e) {
+      e.stopPropagation();
+      const pos = simPortfolio.find(function(p) { return p.id === btn.dataset.id; });
+      if (!pos) return;
+      const plSign = (pos.pl||0) >= 0 ? '+' : '';
+      const plColor = (pos.pl||0) >= 0 ? 'var(--green)' : 'var(--red)';
+      const msg = pos.symbol + ' verkaufen?' + '\n\n' + 'Einstieg: ' + fmtEur(pos.invested||0) + '\n' + 'Ausstieg: ' + fmtEur(pos.currentValue||0) + '\n' + 'Ergebnis: ' + plSign + fmtEur(pos.pl||0) + ' (' + plSign + (pos.plPct||0).toFixed(2) + '%)';
+      const confirmed = confirm(msg);
+      if (!confirmed) return;
+      simSoldPositions.push({
+        id: pos.id,
+        symbol: pos.symbol,
+        name: pos.name,
+        invested: pos.invested||0,
+        exitValue: pos.currentValue||0,
+        realizedPl: pos.pl||0,
+        realizedPlPct: pos.plPct||0,
+        soldDate: new Date().toLocaleDateString('de-DE', {day:'2-digit',month:'short',year:'numeric'}),
+      });
+      simPortfolio = simPortfolio.filter(function(p) { return p.id !== btn.dataset.id; });
+      await saveSimPortfolio();
+      renderSimulator();
+      showToast((pos.pl||0) >= 0 ? 'Gewinn realisiert: +' + fmtEur(pos.pl||0) : 'Verlust realisiert: ' + fmtEur(pos.pl||0));
+    });
+  });
+
+  // Entfernen (ohne Aufzeichnung)
   content.querySelectorAll('.sim-del-btn').forEach(function(btn) {
     btn.addEventListener('click', async function(e) {
       e.stopPropagation();
