@@ -611,7 +611,7 @@ function showToast(msg) {
 const API = '/.netlify/functions';
 async function fetchQuote(symbol, type) {
   const actualType = symbol.endsWith('=F') ? 'commodity' : type;
-  const res = await fetch(API+'/fetch-quote?symbol='+symbol+'&type='+actualType);
+  const res = await fetch(API+'/fetch-quote?symbol='+encodeURIComponent(symbol)+'&type='+actualType);
   if (!res.ok) throw new Error('Kurs nicht gefunden für '+symbol);
   return res.json();
 }
@@ -1093,7 +1093,7 @@ async function loadDetailChart(a) {
   const wrap = document.getElementById('chart-wrap');
   if (!wrap) return;
   try {
-    const res = await fetch(API+'/fetch-chart?symbol='+a.symbol+'&type='+a.type);
+    const res = await fetch(API+'/fetch-chart?symbol='+encodeURIComponent(a.symbol)+'&type='+a.type);
     const data = await res.json();
     const prices = (data.prices||[]).filter(p => p !== null);
     if (prices.length < 2) { wrap.innerHTML = '<div class="chart-placeholder">Keine Kursdaten</div>'; return; }

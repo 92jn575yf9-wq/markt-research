@@ -31,9 +31,13 @@ export default async (req) => {
     }
 
     // ── Aktien/ETFs: Finnhub zuerst ──────────────────────────
-    const suffixes = type === "etf"
-      ? ["", ".L", ".AS", ".DE", ".PA", ".MI", ".SW"]
-      : ["", ".L", ".AS", ".DE"];
+    // Symbol hat bereits Suffix (z.B. RHM.DE, AAPL.L) → nicht nochmal anhängen
+    const hasExchangeSuffix = /\.[A-Z]{1,3}$/.test(symbol);
+    const suffixes = hasExchangeSuffix
+      ? [""]
+      : type === "etf"
+        ? ["", ".L", ".AS", ".DE", ".PA", ".MI", ".SW"]
+        : ["", ".L", ".AS", ".DE"];
 
     let quote = null;
     let resolvedSymbol = symbol;
@@ -53,9 +57,11 @@ export default async (req) => {
 
     // ── Fallback: Yahoo Finance ──────────────────────────────
     if (!quote) {
-      const yahooSuffixes = type === "etf"
-        ? ["", ".L", ".AS", ".DE", ".PA", ".MI", ".SW"]
-        : ["", ".L", ".AS", ".DE"];
+      const yahooSuffixes = hasExchangeSuffix
+        ? [""]
+        : type === "etf"
+          ? ["", ".L", ".AS", ".DE", ".PA", ".MI", ".SW"]
+          : ["", ".L", ".AS", ".DE"];
 
       for (const suffix of yahooSuffixes) {
         const candidate = symbol + suffix;
