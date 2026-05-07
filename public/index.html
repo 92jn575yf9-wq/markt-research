@@ -491,8 +491,13 @@
           <input class="modal-input" id="sim-buy-price" type="number" step="0.01" placeholder="z.B. 180.50">
         </div>
         <div class="modal-field">
-          <div class="modal-label">Anzahl Stück</div>
+          <div class="modal-label" style="display:flex;justify-content:space-between;align-items:center;">
+            <span id="sim-qty-label">Anzahl Stück</span>
+            <span style="font-size:11px;color:var(--accent);cursor:pointer;font-weight:600;" id="sim-qty-toggle">In € eingeben</span>
+          </div>
           <input class="modal-input" id="sim-shares" type="number" step="0.001" placeholder="z.B. 10">
+          <input class="modal-input" id="sim-euros" type="number" step="1" placeholder="z.B. 500" style="display:none;margin-top:8px;">
+          <div id="sim-calc-hint" style="font-size:12px;color:var(--text-secondary);margin-top:4px;display:none;"></div>
         </div>
         <div class="modal-field">
           <div class="modal-label">Kaufdatum</div>
@@ -1478,7 +1483,7 @@ function renderSimulator() {
             '<div class="nachkauf-form" id="nk-form-' + pos.id + '" style="display:none;">' +
               '<div class="nachkauf-row">' +
                 '<div class="nachkauf-field"><div class="nachkauf-label">Kurs (aktuell)</div><input class="nachkauf-input" id="nk-price-' + pos.id + '" type="number" step="0.01" value="' + (pos.currentPrice||'').toString() + '"></div>' +
-                '<div class="nachkauf-field"><div class="nachkauf-label">Anzahl Stück</div><input class="nachkauf-input" id="nk-shares-' + pos.id + '" type="number" step="0.001" placeholder="z.B. 5"></div>' +
+                '<div class="nachkauf-field"><div class="nachkauf-label" style="display:flex;justify-content:space-between;"><span id="nk-lbl-' + pos.id + '">Stück</span><span style="font-size:10px;color:var(--accent);cursor:pointer;" id="nk-toggle-' + pos.id + '">€</span></div><input class="nachkauf-input" id="nk-shares-' + pos.id + '" type="number" step="0.001" placeholder="z.B. 5"><input class="nachkauf-input" id="nk-eur-' + pos.id + '" type="number" step="1" placeholder="z.B. 500" style="display:none;margin-top:4px;"></div>' +
               '</div>' +
               '<button class="nachkauf-btn" data-nk-id="' + pos.id + '">Nachkauf bestätigen</button>' +
             '</div>'
@@ -1547,8 +1552,17 @@ function renderSimulator() {
       e.stopPropagation();
       const posId = btn.dataset.nkId;
       const priceInput = parseFloat(document.getElementById('nk-price-' + posId).value);
-      const sharesInput = parseFloat(document.getElementById('nk-shares-' + posId).value);
-      if (!priceInput || !sharesInput || sharesInput <= 0) { showToast('Kurs und Stückzahl angeben'); return; }
+      const tog = document.getElementById('nk-toggle-' + posId);
+      const nkMode = tog ? tog.dataset.mode || 'shares' : 'shares';
+      let sharesInput;
+      if (nkMode === 'euros') {
+        const eurInput = parseFloat(document.getElementById('nk-eur-' + posId).value);
+        if (!priceInput || !eurInput) { showToast('Kurs und Betrag angeben'); return; }
+        sharesInput = eurInput / priceInput;
+      } else {
+        sharesInput = parseFloat(document.getElementById('nk-shares-' + posId).value);
+        if (!priceInput || !sharesInput || sharesInput <= 0) { showToast('Kurs und Stückzahl angeben'); return; }
+      }
       const idx = simPortfolio.findIndex(function(p) { return p.id === posId; });
       if (idx < 0) return;
       const pos = simPortfolio[idx];
@@ -1690,6 +1704,42 @@ document.getElementById('sim-type-select').addEventListener('change', function()
   document.getElementById('sim-dca-fields').style.display = isDca ? '' : 'none';
 });
 
+// Toggle Stück / Euro
+let simQtyMode = 'shares'; // 'shares' oder 'euros'
+document.getElementById('sim-qty-toggle').addEventListener('click', function() {
+  simQtyMode = simQtyMode === 'shares' ? 'euros' : 'shares';
+  const isEuros = simQtyMode === 'euros';
+  document.getElementById('sim-qty-label').textContent = isEuros ? 'Betrag in €' : 'Anzahl Stück';
+  document.getElementById('sim-qty-toggle').textContent = isEuros ? 'In Stück eingeben' : 'In € eingeben';
+  document.getElementById('sim-shares').style.display = isEuros ? 'none' : '';
+  document.getElementById('sim-euros').style.display = isEuros ? '' : 'none';
+  updateSimCalcHint();
+});
+
+function updateSimCalcHint() {
+  const hint = document.getElementById('sim-calc-hint');
+  const price = parseFloat(document.getElementById('sim-buy-price').value);
+  if (!hint) return;
+  if (simQtyMode === 'euros') {
+    const euros = parseFloat(document.getElementById('sim-euros').value);
+    if (price && euros) {
+      const shares = euros / price;
+      hint.textContent = '= ' + shares.toFixed(4) + ' Stück à ' + price.toFixed(2) + ' €';
+      hint.style.display = '';
+    } else { hint.style.display = 'none'; }
+  } else {
+    const shares = parseFloat(document.getElementById('sim-shares').value);
+    if (price && shares) {
+      hint.textContent = '= ' + (price * shares).toFixed(2) + ' € Gesamtinvest';
+      hint.style.display = '';
+    } else { hint.style.display = 'none'; }
+  }
+}
+
+document.getElementById('sim-buy-price').addEventListener('input', updateSimCalcHint);
+document.getElementById('sim-shares').addEventListener('input', updateSimCalcHint);
+document.getElementById('sim-euros').addEventListener('input', updateSimCalcHint);
+
 document.getElementById('sim-search').addEventListener('input', function(e) {
   clearTimeout(simSearchTimer);
   simSearchTimer = setTimeout(function() { simSearchSymbol(e.target.value.trim()); }, 350);
@@ -1732,12 +1782,19 @@ async function simSearchSymbol(q) {
 
 function clearSimSelection() {
   simSelectedAsset = null;
+  simQtyMode = 'shares';
   document.getElementById('sim-selected-block').style.display = 'none';
   document.getElementById('sim-search').value = '';
   document.getElementById('sim-search-results').innerHTML = '';
   document.getElementById('sim-search-results').classList.remove('open');
   document.getElementById('sim-buy-price').value = '';
   document.getElementById('sim-shares').value = '';
+  document.getElementById('sim-shares').style.display = '';
+  document.getElementById('sim-euros').value = '';
+  document.getElementById('sim-euros').style.display = 'none';
+  document.getElementById('sim-calc-hint').style.display = 'none';
+  document.getElementById('sim-qty-label').textContent = 'Anzahl Stück';
+  document.getElementById('sim-qty-toggle').textContent = 'In € eingeben';
   document.getElementById('sim-monthly').value = '';
   document.getElementById('sim-type-select').value = 'single';
   document.getElementById('sim-single-fields').style.display = '';
@@ -1759,9 +1816,16 @@ document.getElementById('sim-confirm').addEventListener('click', async function(
 
   if (simType === 'single') {
     const buyPrice = parseFloat(document.getElementById('sim-buy-price').value);
-    const shares = parseFloat(document.getElementById('sim-shares').value);
     const buyDate = document.getElementById('sim-buy-date').value;
-    if (!buyPrice || !shares) { showToast('Kaufkurs und Stückzahl angeben'); return; }
+    let shares;
+    if (simQtyMode === 'euros') {
+      const euros = parseFloat(document.getElementById('sim-euros').value);
+      if (!buyPrice || !euros) { showToast('Kaufkurs und Betrag angeben'); return; }
+      shares = euros / buyPrice;
+    } else {
+      shares = parseFloat(document.getElementById('sim-shares').value);
+      if (!buyPrice || !shares) { showToast('Kaufkurs und Stückzahl angeben'); return; }
+    }
     pos.buyPrice = buyPrice;
     pos.shares = shares;
     pos.buyDate = buyDate;
