@@ -640,7 +640,8 @@ let newsCache = null;
 // ── Formatierung ─────────────────────────────────
 function fmtPrice(p, currency) {
   if (!p && p !== 0) return '—';
-  return new Intl.NumberFormat('de-DE', { style:'currency', currency: currency||'EUR', minimumFractionDigits:2, maximumFractionDigits: p > 1000 ? 0 : 2 }).format(p);
+  const decimals = p > 1000 ? 0 : 2;
+  return new Intl.NumberFormat('de-DE', { style:'currency', currency: currency||'EUR', minimumFractionDigits: decimals, maximumFractionDigits: decimals }).format(p);
 }
 function fmtPct(p) {
   if (p === undefined || p === null) return '—';
@@ -688,21 +689,14 @@ function renderWatchlist() {
   });
   subtitle.textContent = `${watchlist.length} Asset${watchlist.length !== 1 ? 's' : ''}`;
   let out = '';
-  try {
-    for (const [, g] of Object.entries(groups)) {
-      if (!g.items.length) continue;
-      const groupClass = wlCompact ? 'compact-group' : 'list-group';
-      out += '<div class="group-header">'+g.label+'</div><div class="'+groupClass+'">';
-      g.items.forEach(function(a) {
-        try { out += renderCard(a); }
-        catch(cardErr) { out += '<div class="list-item" style="color:var(--red);font-size:12px;padding:8px;">Fehler bei ' + (a.symbol||'?') + ': ' + cardErr.message + '</div>'; }
-      });
-      out += '</div>';
-    }
-  } catch(groupErr) {
-    out = '<div style="padding:16px;color:var(--red);font-size:14px;">Render-Fehler: ' + groupErr.message + '</div>';
+  for (const [, g] of Object.entries(groups)) {
+    if (!g.items.length) continue;
+    const groupClass = wlCompact ? 'compact-group' : 'list-group';
+    out += '<div class="group-header">'+g.label+'</div><div class="'+groupClass+'">';
+    g.items.forEach(function(a) { out += renderCard(a); });
+    out += '</div>';
   }
-  container.innerHTML = out || '<div style="padding:16px;color:var(--text-secondary);">Keine Einträge gerendert (out ist leer)</div>';
+  container.innerHTML = out;
   container.querySelectorAll('[data-symbol]').forEach(el => {
     el.addEventListener('click', function() {
       const a = watchlist.find(x => x.symbol === el.dataset.symbol);
