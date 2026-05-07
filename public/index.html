@@ -1292,12 +1292,18 @@ document.getElementById('modal-add').addEventListener('click', async () => {
   newsCache = null;
   try {
     const q = await fetchQuote(symbol, type);
-    const idx = watchlist.findIndex(a => a.symbol === symbol);
-    if (idx >= 0) { watchlist[idx] = { ...watchlist[idx], ...q }; renderWatchlist(); await saveWatchlist(watchlist); }
+    const idx = watchlist.findIndex(function(a) { return a.symbol === symbol || a.symbol === q.symbol; });
+    if (idx >= 0) {
+      watchlist[idx] = { ...watchlist[idx], ...q };
+      // Symbol aus API-Antwort übernehmen (wichtig für Commodities)
+      watchlist[idx].symbol = q.symbol || symbol;
+      renderWatchlist();
+      await saveWatchlist(watchlist);
+    }
   } catch(err) {
-    showToast(`Kurs für ${symbol} nicht gefunden`);
-    watchlist = watchlist.filter(a => a.symbol !== symbol);
-    renderWatchlist();
+    // Asset bleibt in der Watchlist, Kurs wird beim nächsten Refresh geholt
+    showToast(symbol + ' hinzugefügt — Kurs folgt beim Refresh');
+    await saveWatchlist(watchlist);
   }
 });
 
@@ -1891,9 +1897,12 @@ document.getElementById('analyze-all-btn').addEventListener('click', async funct
   try {
     await loadSimPortfolio();
     watchlist = await loadWatchlist();
-    const updates = watchlist.map(async a => {
-      try { return { ...a, ...await fetchQuote(a.symbol, a.type) }; }
-      catch { return a; }
+    const updates = watchlist.map(async function(a) {
+      try {
+        const q = await fetchQuote(a.symbol, a.type);
+        // Symbol aus API behalten (Commodity behält =F)
+        return { ...a, ...q, symbol: a.symbol };
+      } catch { return a; }
     });
     watchlist = await Promise.all(updates);
     renderWatchlist();
